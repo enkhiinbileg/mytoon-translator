@@ -172,9 +172,8 @@ def main():
         server.listen(server_name)
      
     # Set the application icon
-    # icon = QIcon(":/icons/window_icon.png")  
     current_file_dir = os.path.dirname(os.path.abspath(__file__))
-    icon_path = os.path.join(current_file_dir, 'resources', 'icons', 'icon.ico')
+    icon_path = os.path.join(current_file_dir, 'resources', 'icons', 'icon.jpg')
     icon = QIcon(icon_path)
     app.setWindowIcon(icon)
 

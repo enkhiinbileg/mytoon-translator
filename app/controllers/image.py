@@ -325,7 +325,7 @@ class ImageStateController:
         self.main.curr_img_idx = -1
         self.main.set_project_clean()
 
-    def thread_load_images(self, paths: List[str]):
+    def thread_load_images(self, paths: List[str], finished_callback: Callable = None):
         if paths and paths[0].lower().endswith('.ctpr'):
             self.main.project_ctrl.thread_load_project(paths[0])
             return
@@ -375,7 +375,7 @@ class ImageStateController:
         if prev_project_file:
             self.main.project_file = prev_project_file
             self.main.setWindowTitle(f"{os.path.basename(prev_project_file)}[*]")
-        self.main.run_threaded(self.load_initial_image, self.on_initial_image_loaded, self.main.default_error_handler, None, paths)
+        self.main.run_threaded(self.load_initial_image, self.on_initial_image_loaded, self.main.default_error_handler, finished_callback, paths)
 
     def _import_psd_files(self, psd_paths: List[str]) -> list[ImportedPsdPage]:
         return import_psd_files(psd_paths)

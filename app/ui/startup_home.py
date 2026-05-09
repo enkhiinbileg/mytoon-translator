@@ -420,6 +420,7 @@ class StartupHomeScreen(QtWidgets.QWidget):
     _sig_remove_one  = QtCore.Signal(str)
     _sig_clear_all   = QtCore.Signal()
     _sig_pin         = QtCore.Signal(str, bool)   # (path, pinned)
+    sig_batch_import = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -468,12 +469,15 @@ class StartupHomeScreen(QtWidgets.QWidget):
 
         self._card_new  = _NewCard("＋", self.tr("New Project"))
         self._card_open = _NewCard("📂", self.tr("Open Files"))
+        self._card_batch = _NewCard("📚", self.tr("Batch Import"))
 
         self._card_new.clicked.connect(self._on_new_project)
         self._card_open.clicked.connect(self._on_browse)
+        self._card_batch.clicked.connect(self.sig_batch_import.emit)
 
         cards_row.addWidget(self._card_new)
         cards_row.addWidget(self._card_open)
+        cards_row.addWidget(self._card_batch)
         cards_row.addStretch()
         vlay.addLayout(cards_row)
         self._drop_hint = QtWidgets.QLabel(
@@ -712,6 +716,7 @@ class StartupHomeScreen(QtWidgets.QWidget):
 
         self._card_new.apply_theme(d)
         self._card_open.apply_theme(d)
+        self._card_batch.apply_theme(d)
 
         for row in self._rows:
             row.apply_theme(d)

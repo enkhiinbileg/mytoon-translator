@@ -416,7 +416,7 @@ class FlowMixin:
         )
 
     def webtoon_batch_process(
-        self: WebtoonBatchProcessor, selected_paths: List[str] = None
+        self: WebtoonBatchProcessor, selected_paths: List[str] = None, fast_mode: bool = False
     ):
         try:
             timestamp = datetime.now().strftime("%b-%d-%Y_%I-%M-%S%p")
@@ -653,7 +653,7 @@ class FlowMixin:
                     total_virtual=current_record.get("total_virtual", 1)
                 )
                 mask, inpainted = self._inpaint_image_with_blocks(
-                    current_record["image"], regular_blocks
+                    current_record["image"], regular_blocks, fast_mode=fast_mode
                 )
                 if mask is not None and inpainted is not None:
                     regular_patches = self._extract_page_patches_from_mask(
@@ -673,6 +673,7 @@ class FlowMixin:
                             matches=split_matches,
                         ),
                         page_records=[current_record, next_record],
+                        fast_mode=fast_mode,
                     )
                     for patches in seam_patches.values():
                         for patch in patches:

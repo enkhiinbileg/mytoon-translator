@@ -146,12 +146,14 @@ class BatchTextEditorController(QtCore.QObject):
         image = self.main.image_data.get(file_path)
         if image is None:
             print(f"DEBUG: Image not in cache, loading: {file_path}")
-            # Use cv2 directly if possible to avoid UI-thread issues in image_ctrl
-            import cv2
-            image = cv2.imread(file_path)
-            if image is not None:
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                self.main.image_data[file_path] = image
+            # Use imkit to load image directly (bypasses UI-thread image_ctrl)
+            try:
+                image = imk.read_image(file_path)
+                if image is not None:
+                    self.main.image_data[file_path] = image
+            except Exception as e:
+                print(f"DEBUG: Error loading image with imkit: {e}")
+                image = None
         
         if image is None:
             print(f"DEBUG: Failed to load image for page {page_idx}")

@@ -160,10 +160,15 @@ class ChunkMixin:
         self: WebtoonBatchProcessor,
         image: np.ndarray,
         blocks: List[TextBlock],
+        fast_mode: bool = False,
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         if not blocks:
             return None, None
             
+        if fast_mode:
+            logger.info("Fast mode enabled in webtoon inpainting: skipping.")
+            return None, None
+
         inpainter_key = self.main_page.settings_page.get_tool_selection("inpainter")
         if inpainter_key == "None":
             logger.info("Inpainting bypassed in webtoon batch processor. Using original image.")
@@ -449,6 +454,7 @@ class ChunkMixin:
         self: WebtoonBatchProcessor,
         seam_job,
         page_records: List[Dict],
+        fast_mode: bool = False,
     ) -> Dict[int, List[Dict]]:
         top_record = page_records[seam_job.top_page_index]
         bottom_record = page_records[seam_job.bottom_page_index]
@@ -479,7 +485,7 @@ class ChunkMixin:
         processed_local_blocks = seam_blocks_local
 
         mask, inpainted_crop = self._inpaint_image_with_blocks(
-            seam_crop, processed_local_blocks
+            seam_crop, processed_local_blocks, fast_mode=fast_mode
         )
         if mask is None or inpainted_crop is None:
             return {seam_job.top_page_index: [], seam_job.bottom_page_index: []}

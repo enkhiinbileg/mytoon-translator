@@ -147,13 +147,13 @@ class ComicTranslatePipeline:
         self.translation_handler.translate_webtoon_visible_area(single_block)
     
     # Batch processing methods
-    def batch_process(self, selected_paths=None):
+    def batch_process(self, selected_paths=None, fast_mode=False):
         """Regular batch processing."""
-        return self.batch_processor.batch_process(selected_paths)
+        return self.batch_processor.batch_process(selected_paths, fast_mode)
     
-    def webtoon_batch_process(self, selected_paths=None):
+    def webtoon_batch_process(self, selected_paths=None, fast_mode=False):
         """Webtoon batch processing with seam-aware virtual-page streaming."""
-        return self.webtoon_batch_processor.webtoon_batch_process(selected_paths)
+        return self.webtoon_batch_processor.webtoon_batch_process(selected_paths, fast_mode)
 
     # Segmentation methods (delegate to segmentation_handler)
     def segment_webtoon_visible_area(self):

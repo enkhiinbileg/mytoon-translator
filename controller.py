@@ -35,6 +35,7 @@ from app.controllers.batch_report import BatchReportController
 from app.controllers.manual_workflow import ManualWorkflowController
 from app.controllers.compare import CompareController
 from modules.utils.exceptions import InsufficientCreditsException, ContentFlaggedException
+from app.controllers.batch_chapter import BatchChapterController
 
 
 # Ensure any pre-declared mandatory models
@@ -71,7 +72,7 @@ class ComicTranslate(ComicTranslateUI):
 
         # Explicitly set window icon to ensure it persists after splash screen
         current_file_dir = os.path.dirname(os.path.abspath(__file__))
-        icon_path = os.path.join(current_file_dir, 'resources', 'icons', 'icon.ico')
+        icon_path = os.path.join(current_file_dir, 'resources', 'icons', 'icon.jpg')
         self.setWindowIcon(QIcon(icon_path))
 
         self.blk_list: list[TextBlock] = []   
@@ -125,6 +126,7 @@ class ComicTranslate(ComicTranslateUI):
         from app.controllers.batch_text_editor import BatchTextEditorController
         self.batch_text_ctrl = BatchTextEditorController(self)
         self.compare_ctrl = CompareController(self)
+        self.batch_chapter_ctrl = BatchChapterController(self)
         try:
             if self._memlogger is not None:
                 self._memlogger.emit("after_controllers_init")
@@ -292,6 +294,7 @@ class ComicTranslate(ComicTranslateUI):
         self.startup_home._sig_pin.connect(
             lambda path, pinned: self.project_ctrl.toggle_pin_project(path, pinned)
         )
+        self.startup_home.sig_batch_import.connect(self._on_batch_import_clicked)
 
         # Batch Text Copy/Paste
         self.copy_all_button.clicked.connect(self.batch_text_ctrl.export_all_text)
@@ -300,6 +303,16 @@ class ComicTranslate(ComicTranslateUI):
         self.workspace_copy_page_button.clicked.connect(self.batch_text_ctrl.export_current_page_text)
         self.workspace_paste_page_button.clicked.connect(self.batch_text_ctrl.import_current_page_text)
         self.workspace_paste_all_button.clicked.connect(self.batch_text_ctrl.import_all_text)
+        
+    def _on_batch_import_clicked(self):
+        from app.ui.batch_import_dialog import BatchImportDialog
+        dialog = BatchImportDialog(self)
+        if dialog.exec() == QtWidgets.QDialog.Accepted:
+            data = dialog.get_data()
+            if not data["chapters"]:
+                return
+            
+            self.batch_chapter_ctrl.start_batch_import(data)
 
     def _guarded_thread_load_images(self, paths: list[str]):
         """Wrap thread_load_images with unsaved-project confirmation and clear state."""
@@ -629,7 +642,7 @@ class ComicTranslate(ComicTranslateUI):
     def register_batch_skip(self, image_path: str, skip_reason: str, error: str):
         self.batch_report_ctrl.register_batch_skip(image_path, skip_reason, error)
 
-    def start_batch_process(self):
+    def start_batch_process(self, fast_mode: bool = False):
         # Verification check before starting
         if not self.auth_manager.check_access():
             Messages.show_error(self, self.tr("Access Denied"), self.tr("Танд ашиглах эрх байхгүй байна!"))
@@ -657,9 +670,9 @@ class ComicTranslate(ComicTranslateUI):
         
         # Choose batch processor based on webtoon mode
         if self.webtoon_mode:
-            self.run_threaded(self.pipeline.webtoon_batch_process, None, self.default_error_handler, self.on_batch_process_finished)
+            self.run_threaded(lambda: self.pipeline.webtoon_batch_process(fast_mode=fast_mode), None, self.default_error_handler, self.on_batch_process_finished)
         else:
-            self.run_threaded(self.pipeline.batch_process, None, self.default_error_handler, self.on_batch_process_finished)
+            self.run_threaded(lambda: self.pipeline.batch_process(fast_mode=fast_mode), None, self.default_error_handler, self.on_batch_process_finished)
 
     def batch_translate_selected(self, selected_file_names: list[str]):
         try:

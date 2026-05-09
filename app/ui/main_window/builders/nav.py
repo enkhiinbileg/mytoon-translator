@@ -68,7 +68,7 @@ class NavRailMixin:
         )
         comic_action.triggered.connect(self.comic_browser_button.clicked)
 
-        project_action = self.tool_menu.addAction(MIcon("ct-file-icon.svg"), self.tr("Project File"))
+        project_action = self.tool_menu.addAction(MIcon("mingcute--document-line.svg"), self.tr("Project File"))
         project_action.triggered.connect(self.project_browser_button.clicked)
 
         psd_action = self.tool_menu.addAction(MIcon("psd-file.svg"), self.tr("PSD"))
