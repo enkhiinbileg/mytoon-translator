@@ -29,6 +29,7 @@ class ImageViewer(QGraphicsView):
     magic_wand_requested = Signal(object) # Emit the TextBlockItem to clean
     rect_clean_requested = Signal(QRectF, QtGui.QColor) # Area and Color to fill
     inpaint_rect_requested = Signal(QRectF) # Area for AI inpainting
+    patch_restore_requested = Signal(object) # The patch item to remove
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -188,8 +189,11 @@ class ImageViewer(QGraphicsView):
             self.setDragMode(QGraphicsView.NoDrag)
             self.viewport().setCursor(Qt.CursorShape.CrossCursor)
         elif tool == 'inpaint_rect':
-            self.setDragMode(QGraphicsView.NoDrag)
+            self.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.viewport().setCursor(Qt.CursorShape.CrossCursor)
+        elif tool == 'patch_restore':
+            self.setDragMode(QGraphicsView.NoDrag)
+            self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
         else:
             self.setDragMode(QGraphicsView.NoDrag)
             self.viewport().setCursor(Qt.CursorShape.ArrowCursor)

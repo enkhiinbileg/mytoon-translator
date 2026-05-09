@@ -6,6 +6,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import QSettings
 
 from app.shortcuts import get_default_shortcuts, get_shortcut_definitions
+from app.ui.dayu_widgets.message import MMessage
 
 if TYPE_CHECKING:
     from controller import ComicTranslate
@@ -20,20 +21,27 @@ class ShortcutController:
         self._register_shortcuts()
 
     def _register_shortcuts(self) -> None:
+        # Clear existing shortcuts
+        for sid, action in self._shortcuts.items():
+            self.main.removeAction(action)
+        self._shortcuts.clear()
+
         for definition in get_shortcut_definitions():
-            shortcut = QtGui.QShortcut(self.main)
-            shortcut.setContext(QtCore.Qt.ShortcutContext.WindowShortcut)
-            shortcut.activated.connect(
-                lambda shortcut_id=definition.id: self._activate_shortcut(shortcut_id)
+            action = QtGui.QAction(self.main)
+            action.setShortcutContext(QtCore.Qt.ShortcutContext.ApplicationShortcut)
+            action.triggered.connect(
+                lambda checked=False, sid=definition.id: self._activate_shortcut(sid)
             )
-            self._shortcuts[definition.id] = shortcut
+            self.main.addAction(action)
+            self._shortcuts[definition.id] = action
 
         self.apply_shortcuts()
 
     def apply_shortcuts(self) -> None:
         current_shortcuts = self.get_current_shortcuts()
-        for shortcut_id, shortcut in self._shortcuts.items():
-            shortcut.setKey(QtGui.QKeySequence(current_shortcuts.get(shortcut_id, "")))
+        for shortcut_id, action in self._shortcuts.items():
+            key = current_shortcuts.get(shortcut_id, "")
+            action.setShortcut(QtGui.QKeySequence(key))
 
     def get_current_shortcuts(self) -> dict[str, str]:
         shortcuts = get_default_shortcuts()
@@ -56,6 +64,8 @@ class ShortcutController:
             "restore_text_blocks": self._restore_text_blocks,
             "toggle_compare": self._toggle_compare,
             "toggle_rect_clean": self._toggle_rect_clean,
+            "toggle_inpaint_rect": self._toggle_inpaint_rect,
+            "toggle_patch_restore": self._toggle_patch_restore,
         }
         handler = handlers.get(shortcut_id)
         if handler is not None:
@@ -71,19 +81,20 @@ class ShortcutController:
     def _toggle_rect_clean(self) -> None:
         if self._is_text_input_focused():
             return
-        # Toggle the Rect Clean tool button in UI
-        current = self.main.workspace_rect_clean_button.isChecked()
-        self.main.workspace_rect_clean_button.setChecked(not current)
-        # Calling click logic manually if needed or just trigger toggled
-        self.main.toggle_rect_clean_tool()
+        new_tool = None if self.main.image_viewer.current_tool == "rect_clean" else "rect_clean"
+        self.main.set_tool(new_tool)
 
     def _toggle_inpaint_rect(self) -> None:
         if self._is_text_input_focused():
             return
-        # Toggle the Inpaint Rect tool button in UI
-        current = self.main.workspace_inpaint_rect_button.isChecked()
-        self.main.workspace_inpaint_rect_button.setChecked(not current)
-        self.main.toggle_inpaint_rect_tool()
+        new_tool = None if self.main.image_viewer.current_tool == "inpaint_rect" else "inpaint_rect"
+        self.main.set_tool(new_tool)
+
+    def _toggle_patch_restore(self) -> None:
+        if self._is_text_input_focused():
+            return
+        new_tool = None if self.main.image_viewer.current_tool == "patch_restore" else "patch_restore"
+        self.main.set_tool(new_tool)
 
     def _workspace_is_active(self) -> bool:
         try:

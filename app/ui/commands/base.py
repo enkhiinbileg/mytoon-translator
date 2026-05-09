@@ -233,6 +233,7 @@ class PatchCommandBase:
     """Shared helpers for pixmap patch commands"""
 
     HASH_KEY = 0
+    PAGE_INDEX_KEY = 1
 
     @staticmethod
     def create_patch_item(properties, viewer: ImageViewer):
@@ -258,6 +259,8 @@ class PatchCommandBase:
             item.setPos(x, y)
             item.setZValue(0.5)
         item.setData(PatchCommandBase.HASH_KEY, properties['hash'])
+        if 'page_index' in properties:
+            item.setData(PatchCommandBase.PAGE_INDEX_KEY, properties['page_index'])
         viewer._scene.addItem(item)
         viewer._scene.update()
         return item

@@ -36,6 +36,7 @@ from app.controllers.manual_workflow import ManualWorkflowController
 from app.controllers.compare import CompareController
 from modules.utils.exceptions import InsufficientCreditsException, ContentFlaggedException
 from app.controllers.batch_chapter import BatchChapterController
+from app.controllers.restore import RestoreController
 
 
 # Ensure any pre-declared mandatory models
@@ -127,6 +128,7 @@ class ComicTranslate(ComicTranslateUI):
         self.batch_text_ctrl = BatchTextEditorController(self)
         self.compare_ctrl = CompareController(self)
         self.batch_chapter_ctrl = BatchChapterController(self)
+        self.restore_ctrl = RestoreController(self)
         try:
             if self._memlogger is not None:
                 self._memlogger.emit("after_controllers_init")
@@ -247,6 +249,7 @@ class ComicTranslate(ComicTranslateUI):
         self.image_viewer.command_emitted.connect(self.push_command)
         self.image_viewer.connect_rect_item.connect(self.rect_item_ctrl.connect_rect_item_signals)
         self.image_viewer.connect_text_item.connect(self.text_ctrl.connect_text_item_signals)
+        self.image_viewer.patch_restore_requested.connect(self.restore_ctrl.handle_patch_restore)
         self.image_viewer.page_changed.connect(self.webtoon_ctrl.on_page_changed)
         self.image_viewer.clear_text_edits.connect(self.text_ctrl.clear_text_edits)
         self.image_viewer.magic_wand_requested.connect(self.batch_text_ctrl.tap_to_clean)

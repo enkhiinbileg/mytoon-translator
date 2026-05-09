@@ -118,24 +118,39 @@ class BatchTextEditorController(QtCore.QObject):
         # 3. Create brush strokes (for inpainter)
         strokes = self.main.manual_workflow_ctrl._serialize_segmentation_strokes(targets)
         
-        # 4. Run Inpainting
-        # We use the pipeline's inpaint_page_from_saved_strokes
-        patches = self.main.pipeline.inpainting.inpaint_page_from_saved_strokes(image, strokes)
-        
-        if patches:
-            # If webtoon mode, map coordinates
-            if getattr(self.main, "webtoon_mode", False):
-                manager = self.main.image_viewer.webtoon_manager
-                for patch in patches:
-                    x, y, _w, _h = patch['bbox']
-                    scene_pos = manager.coordinate_converter.page_local_to_scene_position(QtCore.QPointF(x, y), page_idx)
-                    if scene_pos:
-                        patch['scene_pos'] = [scene_pos.x(), scene_pos.y()]
-                        patch['page_index'] = page_idx
+        # 4. Run Inpainting in background thread
+        self.main.loading.setVisible(True)
+        self.main.disable_hbutton_group()
+
+        def inpaint_worker():
+            return self.main.pipeline.inpainting.inpaint_page_from_saved_strokes(image, strokes)
+
+        def on_finished(patches):
+            self.main.loading.setVisible(False)
+            self.main.enable_hbutton_group()
             
-            # Apply patches via signal for thread-safety
-            self.main.patches_processed.emit(patches, file_path)
+            if patches:
+                # If webtoon mode, map coordinates
+                if getattr(self.main, "webtoon_mode", False):
+                    manager = self.main.image_viewer.webtoon_manager
+                    for patch in patches:
+                        x, y, _w, _h = patch['bbox']
+                        scene_pos = manager.coordinate_converter.page_local_to_scene_position(QtCore.QPointF(x, y), page_idx)
+                        if scene_pos:
+                            patch['scene_pos'] = [scene_pos.x(), scene_pos.y()]
+                            patch['page_index'] = page_idx
+                
+                # Apply patches via signal for thread-safety
+                self.main.patches_processed.emit(patches, file_path)
+            
             self.main.mark_project_dirty()
+            self.main.on_manual_finished()
+
+        self.main.run_threaded(
+            inpaint_worker,
+            on_finished,
+            self.main.default_error_handler
+        )
 
     def _fast_solid_clean(self, page_idx: int, blk_ids: list[int]):
         """Fast cleaning by filling blocks with their dominant background color."""
@@ -337,12 +352,18 @@ class BatchTextEditorController(QtCore.QObject):
             rendered_image = main_img
 
         # 5. Perform inpainting in background thread to avoid UI lag
+        self.main.loading.setVisible(True)
+        self.main.disable_hbutton_group()
+
         def inpaint_worker():
             # AI part runs in background with pre-captured image
             return self.main.pipeline.inpainting.get_patches_for_mask(page_idx, mask, image=rendered_image)
             
         def on_finished(result):
             # Applying patches runs in main thread
+            self.main.loading.setVisible(False)
+            self.main.enable_hbutton_group()
+            
             if result:
                 patches, f_path = result
                 if patches and f_path:
@@ -350,13 +371,13 @@ class BatchTextEditorController(QtCore.QObject):
                     self.main.pipeline.inpainting.enrich_patches_with_scene_pos(patches, page_idx)
                     self.main.image_ctrl.on_inpaint_patches_processed(patches, f_path)
             self.main.mark_project_dirty()
+            self.main.on_manual_finished()
             
         # Execute threaded
         self.main.run_threaded(
             inpaint_worker, 
             on_finished, 
-            self.main.default_error_handler, 
-            self.main.on_manual_finished
+            self.main.default_error_handler
         )
 
     def tap_to_clean(self, item):

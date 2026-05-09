@@ -84,6 +84,12 @@ class EventHandler:
                     self.viewer.magic_wand_requested.emit(clicked_item)
                     return # Stop further processing for this click
             
+            # Patch Restore Tool - Single Click Restoration
+            if self.viewer.current_tool == 'patch_restore':
+                if isinstance(clicked_item, QGraphicsPixmapItem) and clicked_item.data(0) is not None:
+                    self.viewer.patch_restore_requested.emit(clicked_item)
+                    return
+            
             # Rect Clean Tool - Initial color pick and box start
             if self.viewer.current_tool == 'rect_clean':
                 if self._is_on_image(scene_pos):

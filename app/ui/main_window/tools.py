@@ -53,6 +53,12 @@ class ToolStateMixin:
         else:
             self.set_tool(None)
 
+    def toggle_patch_restore_tool(self):
+        if self.workspace_restore_button.isChecked():
+            self.set_tool("patch_restore")
+        else:
+            self.set_tool(None)
+
     def set_slider_size(self, size: int):
         self.brush_eraser_slider.blockSignals(True)
         self.brush_eraser_slider.setValue(size)

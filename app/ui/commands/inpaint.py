@@ -1,6 +1,7 @@
 import os
 import hashlib
 import uuid
+import copy
 from PySide6.QtGui import QUndoCommand
 from .base import PatchCommandBase
 import imkit as imk
@@ -124,4 +125,65 @@ class PatchInsertCommand(QUndoCommand, PatchCommandBase):
     def undo(self):
         self._remove_pixmaps()
         self._unregister_patches()
+
+
+class PatchRemoveCommand(QUndoCommand, PatchCommandBase):
+    def __init__(self, ct, patch_item, file_path):
+        super().__init__("Remove patch")
+        self.ct = ct
+        self.viewer = ct.image_viewer
+        self.scene = self.viewer._scene
+        self.file_path = file_path
+        self.patch_hash = patch_item.data(0) # HASH_KEY
+        
+        # Find the original properties from image_patches
+        self.patch_properties = None
+        patches_list = self.ct.image_patches.get(self.file_path, [])
+        for p in patches_list:
+            if p.get('hash') == self.patch_hash:
+                self.patch_properties = copy.deepcopy(p)
+                break
+                
+        self.patch_item = patch_item
+
+    def redo(self):
+        # 1. Remove from persistent storage
+        if self.file_path in self.ct.image_patches:
+            self.ct.image_patches[self.file_path] = [
+                p for p in self.ct.image_patches[self.file_path] if p.get('hash') != self.patch_hash
+            ]
+        # 2. Remove from memory cache
+        if self.file_path in self.ct.in_memory_patches:
+            self.ct.in_memory_patches[self.file_path] = [
+                p for p in self.ct.in_memory_patches[self.file_path] if p.get('hash') != self.patch_hash
+            ]
+        # 3. Remove from scene
+        if self.patch_item in self.scene.items():
+            self.scene.removeItem(self.patch_item)
+        self.viewer.update()
+        self.ct.mark_project_dirty()
+
+    def undo(self):
+        if not self.patch_properties:
+            return
+            
+        # 1. Restore to persistent storage
+        patches_list = self.ct.image_patches.setdefault(self.file_path, [])
+        if not any(p.get('hash') == self.patch_hash for p in patches_list):
+            patches_list.append(copy.deepcopy(self.patch_properties))
+            
+        # 2. Restore to memory cache
+        mem_list = self.ct.in_memory_patches.setdefault(self.file_path, [])
+        if not any(p.get('hash') == self.patch_hash for p in mem_list):
+            img_data = imk.read_image(self.patch_properties['png_path'])
+            mem_list.append({
+                'bbox': self.patch_properties['bbox'],
+                'image': img_data,
+                'hash': self.patch_hash
+            })
+            
+        # 3. Restore to scene
+        self.patch_item = self.create_patch_item(self.patch_properties, self.viewer)
+        self.viewer.update()
+        self.ct.mark_project_dirty()
 

@@ -56,6 +56,12 @@ SHORTCUT_DEFINITIONS: tuple[ShortcutDefinition, ...] = (
         description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Activate the AI-based rectangular cleaning tool."),
         default="S",
     ),
+    ShortcutDefinition(
+        id="toggle_patch_restore",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Toggle Patch Restore Tool"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Activate the interactive restoration tool."),
+        default="K",
+    ),
 )
 
 

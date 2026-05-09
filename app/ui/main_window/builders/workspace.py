@@ -53,7 +53,7 @@ class WorkspaceMixin:
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(False)
 
-        self.loading = MLoading().small()
+        self.loading = MLoading.tiny()
         self.loading.setVisible(False)
 
         self.manual_radio = MRadioButton(self.tr("Manual"))
@@ -89,8 +89,13 @@ class WorkspaceMixin:
         self.batch_report_button.setEnabled(False)
         self.batch_report_button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
-        header_layout.addWidget(self.hbutton_group)
-        header_layout.addWidget(self.loading)
+        pipeline_layout = QtWidgets.QHBoxLayout()
+        pipeline_layout.setContentsMargins(0, 0, 0, 0)
+        pipeline_layout.setSpacing(4)
+        pipeline_layout.addWidget(self.hbutton_group)
+        pipeline_layout.addWidget(self.loading)
+
+        header_layout.addLayout(pipeline_layout)
         header_layout.addStretch()
         header_layout.addWidget(self.webtoon_toggle)
         header_layout.addWidget(self.compare_toggle)
@@ -407,6 +412,11 @@ class WorkspaceMixin:
                 background-color: #3b82f6;
             }
         """)
+        self.workspace_restore_button = MToolButton().svg("undo.svg")
+        self.workspace_restore_button.setCheckable(True)
+        self.workspace_restore_button.setToolTip(self.tr("Restore Tool: Click on a patched area to remove it"))
+        self.workspace_restore_button.clicked.connect(self.toggle_patch_restore_tool)
+        self.tool_buttons["patch_restore"] = self.workspace_restore_button
 
         inp_tools_lay.addWidget(self.brush_button)
         inp_tools_lay.addWidget(self.eraser_button)
@@ -415,6 +425,8 @@ class WorkspaceMixin:
         inp_tools_lay.addWidget(self.workspace_rect_clean_button)
         inp_tools_lay.addWidget(self.workspace_inpaint_rect_button)
         inp_tools_lay.addWidget(self.workspace_magic_wand_all_button)
+        inp_tools_lay.addWidget(MDivider(orientation=QtCore.Qt.Vertical))
+        inp_tools_lay.addWidget(self.workspace_restore_button)
         inp_tools_lay.addStretch()
 
         self.brush_eraser_slider = MSlider()
