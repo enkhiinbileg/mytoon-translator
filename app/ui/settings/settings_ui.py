@@ -89,6 +89,7 @@ class SettingsPageUI(QtWidgets.QWidget):
             'Deutsch', 
             'Español', 
             'Italiano', 
+            'Mongolian',
         ]
         
         self.nav_cards = []  
@@ -105,6 +106,7 @@ class SettingsPageUI(QtWidgets.QWidget):
             "Deutsch": "Deutsch",
             "Español": "Español",
             "Italiano": "Italiano",
+            "Mongolian": "Mongolian",
 
             # Theme mappings
             self.tr("Dark"): "Dark",

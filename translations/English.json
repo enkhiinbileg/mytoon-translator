@@ -1,0 +1,23 @@
+{
+    "TRANSLATE_ALL": "Translate All",
+    "CANCEL": "Cancel",
+    "REPORT": "Report",
+    "DETECT": "Detect",
+    "RECOGNIZE": "Recognize",
+    "TRANSLATE": "Translate",
+    "SEGMENT": "Segment",
+    "CLEAN": "Clean",
+    "RENDER": "Render",
+    "MANUAL": "Manual",
+    "AUTOMATIC": "Automatic",
+    "INPAINT_TOOL": "Inpaint Rect",
+    "BRUSH_TOOL": "Brush",
+    "ERASER_TOOL": "Eraser",
+    "BOX_TOOL": "Box Drawing",
+    "TEXT_VISIBILITY": "Toggle Text Visibility",
+    "COMPARE_MODE": "Compare Mode",
+    "SETTINGS": "Settings",
+    "LANGUAGE": "Language",
+    "MONGOLIAN": "Mongolian",
+    "ENGLISH": "English"
+}

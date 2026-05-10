@@ -37,6 +37,13 @@ from app.controllers.compare import CompareController
 from modules.utils.exceptions import InsufficientCreditsException, ContentFlaggedException
 from app.controllers.batch_chapter import BatchChapterController
 from app.controllers.restore import RestoreController
+from modules.utils.i18n import tr as translate_func, set_ui_language
+
+# Global monkeypatch for translation support across all widgets
+def global_tr(self, text, *args, **kwargs):
+    return translate_func(text)
+
+QtWidgets.QWidget.tr = global_tr
 
 
 # Ensure any pre-declared mandatory models
@@ -55,6 +62,11 @@ class ComicTranslate(ComicTranslateUI):
     download_event = QtCore.Signal(str, str)  # status, name
 
     def __init__(self, parent=None):
+        # Load language from settings before anything else
+        settings = QtCore.QSettings("ComicLabs", "ComicTranslate")
+        ui_lang = settings.value("language", "English")
+        set_ui_language(ui_lang)
+        
         super(ComicTranslate, self).__init__(parent)
         self.setWindowTitle("Project1.ctpr[*]")
 

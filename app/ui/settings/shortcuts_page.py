@@ -103,4 +103,5 @@ class ShortcutsPage(QtWidgets.QWidget):
 
     @classmethod
     def _translate_definition(cls, text: str) -> str:
-        return QCoreApplication.translate(cls.TRANSLATION_CONTEXT, text)
+        from modules.utils.i18n import tr as translate_func
+        return translate_func(text)
