@@ -99,6 +99,42 @@ SHORTCUT_DEFINITIONS: tuple[ShortcutDefinition, ...] = (
         default="Ctrl+Shift+O",
     ),
     ShortcutDefinition(
+        id="increase_glow_radius",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Increase Glow Radius"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Increase the glow radius of selected text."),
+        default="Ctrl+]",
+    ),
+    ShortcutDefinition(
+        id="decrease_glow_radius",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Decrease Glow Radius"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Decrease the glow radius of selected text."),
+        default="Ctrl+[",
+    ),
+    ShortcutDefinition(
+        id="toggle_glow",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Toggle Glow"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Toggle glow effect on/off for selected text."),
+        default="Ctrl+G",
+    ),
+    ShortcutDefinition(
+        id="glow_white",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "White Glow"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Apply a white glow to selected text."),
+        default="Ctrl+Alt+W",
+    ),
+    ShortcutDefinition(
+        id="glow_black",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Black Glow"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Apply a black glow to selected text."),
+        default="Ctrl+Alt+B",
+    ),
+    ShortcutDefinition(
+        id="glow_color_picker",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Glow Color Picker"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Open the color picker for the text glow."),
+        default="Ctrl+Shift+G",
+    ),
+    ShortcutDefinition(
         id="copy_style",
         label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Copy Style"),
         description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Copy the font style and outline of the selected text."),

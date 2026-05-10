@@ -72,6 +72,12 @@ class ShortcutController:
             "outline_white": self._outline_white,
             "outline_black": self._outline_black,
             "outline_color_picker": self._outline_color_picker,
+            "increase_glow_radius": self._increase_glow_radius,
+            "decrease_glow_radius": self._decrease_glow_radius,
+            "toggle_glow": self._toggle_glow,
+            "glow_white": self._glow_white,
+            "glow_black": self._glow_black,
+            "glow_color_picker": self._glow_color_picker,
             "copy_style": self._copy_style,
             "paste_style": self._paste_style,
         }
@@ -138,6 +144,39 @@ class ShortcutController:
         if self._is_text_input_focused():
             return
         self.main.text_ctrl.on_outline_color_change()
+
+    def _increase_glow_radius(self) -> None:
+        if self._is_text_input_focused():
+            return
+        current = float(self.main.glow_radius_dropdown.currentText())
+        self.main.glow_radius_dropdown.setCurrentText(str(round(min(50.0, current + 2.0), 1)))
+
+    def _decrease_glow_radius(self) -> None:
+        if self._is_text_input_focused():
+            return
+        current = float(self.main.glow_radius_dropdown.currentText())
+        self.main.glow_radius_dropdown.setCurrentText(str(round(max(1.0, current - 2.0), 1)))
+
+    def _toggle_glow(self) -> None:
+        if self._is_text_input_focused():
+            return
+        state = self.main.glow_checkbox.isChecked()
+        self.main.glow_checkbox.setChecked(not state)
+
+    def _glow_white(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.text_ctrl.apply_glow_color("#ffffff")
+
+    def _glow_black(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.text_ctrl.apply_glow_color("#000000")
+
+    def _glow_color_picker(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.text_ctrl.on_glow_color_change()
 
     def _copy_style(self) -> None:
         if self._is_text_input_focused():

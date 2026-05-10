@@ -38,9 +38,10 @@ class TextController:
             self.main.font_size_dropdown,
             self.main.line_spacing_dropdown,
             self.main.block_font_color_button,
-            self.main.outline_font_color_button,
-            self.main.outline_width_dropdown,
-            self.main.outline_checkbox
+            self.main.outline_checkbox,
+            self.main.glow_checkbox,
+            self.main.glow_color_button,
+            self.main.glow_radius_dropdown
         ]
         self._text_change_timer = QtCore.QTimer(self.main)
         self._text_change_timer.setSingleShot(True)
@@ -637,9 +638,82 @@ class TextController:
                 color_str = self.main.outline_font_color_button.property('selected_color')
                 color = QColor(color_str)
                 self.main.curr_tblock_item.set_outline(color, outline_width)
-
                 command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
                 self.main.push_command(command)
+
+    # Glow methods
+    def on_glow_color_change(self):
+        current_color = self.main.glow_color_button.property('selected_color')
+        glow_radius = float(self.main.glow_radius_dropdown.currentText())
+
+        def live_preview(color):
+            if color.isValid():
+                if self.main.curr_tblock_item:
+                    self.main.curr_tblock_item.set_glow(color, glow_radius)
+                self.main.glow_checkbox.setChecked(True)
+
+        new_color = self.main.get_color(initial_color=current_color, live_preview_callback=live_preview)
+        
+        if new_color and new_color.isValid():
+            self.main.glow_checkbox.setChecked(True)
+            self.main.glow_color_button.setStyleSheet(
+                f"background-color: {new_color.name()}; border: none; border-radius: 5px;"
+            )
+            self.main.glow_color_button.setProperty('selected_color', new_color.name())
+            if self.main.curr_tblock_item:
+                old_item = copy.copy(self.main.curr_tblock_item)
+                self.main.curr_tblock_item.set_glow(new_color, glow_radius)
+                command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
+                self.main.push_command(command)
+        elif self.main.curr_tblock_item and self.main.glow_checkbox.isChecked():
+            # Revert to old color on cancel
+            self.main.curr_tblock_item.set_glow(QColor(current_color), glow_radius)
+
+    def on_glow_radius_change(self, radius_text):
+        self.main.glow_checkbox.setChecked(True)
+        if self.main.curr_tblock_item:
+            old_item = copy.copy(self.main.curr_tblock_item)
+            try:
+                glow_radius = float(radius_text)
+            except ValueError:
+                return
+            color_str = self.main.glow_color_button.property('selected_color')
+            color = QColor(color_str)
+            self.main.curr_tblock_item.set_glow(color, glow_radius)
+
+            command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
+            self.main.push_command(command)
+
+    def toggle_glow(self, state):
+        enabled = True if state == 2 else False
+        if self.main.curr_tblock_item:
+            if not enabled:
+                old_item = copy.copy(self.main.curr_tblock_item)
+                self.main.curr_tblock_item.set_glow(None, 0)
+                command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
+                self.main.push_command(command)
+            else:
+                color_str = self.main.glow_color_button.property('selected_color')
+                radius = float(self.main.glow_radius_dropdown.currentText())
+                old_item = copy.copy(self.main.curr_tblock_item)
+                self.main.curr_tblock_item.set_glow(QColor(color_str), radius)
+                command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
+                self.main.push_command(command)
+
+    def apply_glow_color(self, color_hex: str):
+        color = QColor(color_hex)
+        self.main.glow_checkbox.setChecked(True)
+        self.main.glow_color_button.setStyleSheet(
+            f"background-color: {color.name()}; border: none; border-radius: 5px;"
+        )
+        self.main.glow_color_button.setProperty('selected_color', color.name())
+        glow_radius = float(self.main.glow_radius_dropdown.currentText())
+
+        if self.main.curr_tblock_item:
+            old_item = copy.copy(self.main.curr_tblock_item)
+            self.main.curr_tblock_item.set_glow(color, glow_radius)
+            command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
+            self.main.push_command(command)
 
     def copy_style(self):
         if self.main.curr_tblock_item:
@@ -654,7 +728,10 @@ class TextController:
                 'alignment': item.alignment,
                 'line_spacing': item.line_spacing,
                 'outline_color': item.outline_color,
-                'outline_width': item.outline_width
+                'outline_width': item.outline_width,
+                'glow': item.glow,
+                'glow_color': item.glow_color,
+                'glow_radius': item.glow_radius
             }
             MMessage.config(dayu_theme.success)
             MMessage.success(self.main.tr("Style Copied"), parent=self.main, duration=1)
@@ -681,6 +758,11 @@ class TextController:
             if 'alignment' in style: item.set_alignment(style['alignment'])
             if 'line_spacing' in style: item.set_line_spacing(style['line_spacing'])
             if 'outline_color' in style: item.set_outline(style['outline_color'], style['outline_width'])
+            if 'glow' in style:
+                if style['glow']:
+                    item.set_glow(style['glow_color'], style['glow_radius'])
+                else:
+                    item.set_glow(None, 0)
             
             command = TextFormatCommand(self.main.image_viewer, old_item, item)
             self.main.push_command(command)
@@ -745,6 +827,19 @@ class TextController:
                     "background-color: white; border: none; border-radius: 5px;"
                 )
                 self.main.outline_font_color_button.setProperty('selected_color', '#ffffff')
+
+            # Update Glow settings
+            self.main.glow_checkbox.blockSignals(True)
+            self.main.glow_checkbox.setChecked(True if text_item.glow else False)
+            self.main.glow_checkbox.blockSignals(False)
+            
+            self.main.glow_color_button.setStyleSheet(
+                f"background-color: {text_item.glow_color.name()}; border: none; border-radius: 5px;"
+            )
+            self.main.glow_color_button.setProperty('selected_color', text_item.glow_color.name())
+            self.main.glow_radius_dropdown.blockSignals(True)
+            self.main.glow_radius_dropdown.setCurrentText(str(int(text_item.glow_radius)))
+            self.main.glow_radius_dropdown.blockSignals(False)
 
             self.main.outline_width_dropdown.setCurrentText(str(text_item.outline_width))
             self.main.outline_checkbox.setChecked(text_item.outline)

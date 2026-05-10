@@ -292,6 +292,9 @@ class ComicTranslate(ComicTranslateUI):
         self.outline_font_color_button.clicked.connect(self.text_ctrl.on_outline_color_change)
         self.outline_width_dropdown.currentTextChanged.connect(self.text_ctrl.on_outline_width_change)
         self.outline_checkbox.stateChanged.connect(self.text_ctrl.toggle_outline_settings)
+        self.glow_color_button.clicked.connect(self.text_ctrl.on_glow_color_change)
+        self.glow_radius_dropdown.currentTextChanged.connect(self.text_ctrl.on_glow_radius_change)
+        self.glow_checkbox.stateChanged.connect(self.text_ctrl.toggle_glow)
 
         # Page List
         self.page_list.currentItemChanged.connect(self.image_ctrl.on_page_list_current_item_changed)

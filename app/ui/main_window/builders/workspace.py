@@ -280,8 +280,7 @@ class WorkspaceMixin:
         main_text_settings_layout.addWidget(self.underline_button)
         main_text_settings_layout.addStretch()
 
-        outline_settings_layout = QtWidgets.QHBoxLayout()
-
+        outline_row_layout = QtWidgets.QHBoxLayout()
         self.outline_checkbox = MCheckBox(self.tr("Outline"))
         self.outline_checkbox.setChecked(dflt_outline_check)
 
@@ -297,20 +296,43 @@ class WorkspaceMixin:
         self.outline_width_dropdown.addItems(["1.0", "1.5", "2.0", "2.5", "3.0", "4.0", "5.0", "7.5", "10.0"])
         self.outline_width_dropdown.set_editable(True)
 
-        outline_settings_layout.addWidget(self.outline_checkbox)
-        outline_settings_layout.addWidget(self.outline_font_color_button)
-        outline_settings_layout.addWidget(self.outline_width_dropdown)
+        outline_row_layout.addWidget(self.outline_checkbox)
+        outline_row_layout.addWidget(self.outline_font_color_button)
+        outline_row_layout.addWidget(self.outline_width_dropdown)
+        outline_row_layout.addStretch()
         
         self.outline_font_color_button.setEnabled(True)
         self.outline_width_dropdown.setEnabled(True)
-        outline_settings_layout.addStretch()
+
+        glow_row_layout = QtWidgets.QHBoxLayout()
+        self.glow_checkbox = MCheckBox(self.tr("Glow"))
+        self.glow_checkbox.setChecked(False)
+        
+        self.glow_color_button = QtWidgets.QPushButton()
+        self.glow_color_button.setToolTip(self.tr("Glow Color"))
+        self.glow_color_button.setFixedSize(30, 30)
+        self.glow_color_button.setStyleSheet("background-color: white; border: none; border-radius: 5px;")
+        self.glow_color_button.setProperty("selected_color", "#ffffff")
+        
+        self.glow_radius_dropdown = MComboBox().small()
+        self.glow_radius_dropdown.setFixedWidth(60)
+        self.glow_radius_dropdown.setToolTip(self.tr("Glow Radius"))
+        self.glow_radius_dropdown.addItems(["5", "10", "15", "20", "30"])
+        self.glow_radius_dropdown.set_editable(True)
+        self.glow_radius_dropdown.setCurrentText("10")
+
+        glow_row_layout.addWidget(self.glow_checkbox)
+        glow_row_layout.addWidget(self.glow_color_button)
+        glow_row_layout.addWidget(self.glow_radius_dropdown)
+        glow_row_layout.addStretch()
 
         rendering_divider_top = MDivider()
         rendering_divider_bottom = MDivider()
         text_render_layout.addWidget(rendering_divider_top)
         text_render_layout.addLayout(font_settings_layout)
         text_render_layout.addLayout(main_text_settings_layout)
-        text_render_layout.addLayout(outline_settings_layout)
+        text_render_layout.addLayout(outline_row_layout)
+        text_render_layout.addLayout(glow_row_layout)
         text_render_layout.addWidget(rendering_divider_bottom)
 
         tools_widget = QtWidgets.QWidget()

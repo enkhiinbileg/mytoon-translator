@@ -56,9 +56,17 @@ class TextBlockItem(QGraphicsTextItem):
              bold=False, 
              italic=False, 
              underline=False,
-             direction=Qt.LayoutDirection.LeftToRight):
+             direction=Qt.LayoutDirection.LeftToRight,
+             glow_color=None,
+             glow_radius=10):
 
         super().__init__(text)
+        from PySide6.QtWidgets import QGraphicsDropShadowEffect
+        self._glow_effect = QGraphicsDropShadowEffect()
+        self._glow_effect.setOffset(0, 0)
+        self.setGraphicsEffect(self._glow_effect)
+        self._glow_effect.setEnabled(False)
+
         self.text_color = render_color
         self.outline = True if outline_color else False
         self.outline_color = outline_color
@@ -71,6 +79,12 @@ class TextBlockItem(QGraphicsTextItem):
         self.alignment = alignment
         self.line_spacing = line_spacing
         self.direction = direction
+        
+        self.glow = True if glow_color else False
+        self.glow_color = glow_color if glow_color else QColor(255, 255, 255)
+        self.glow_radius = glow_radius
+        if self.glow:
+            self.set_glow(self.glow_color, self.glow_radius)
 
         self.layout = None
         self.vertical = False
@@ -395,6 +409,20 @@ class TextBlockItem(QGraphicsTextItem):
                 OutlineInfo(start, end, outline_color, outline_width, type)
             )
         
+        self.update()
+
+    def set_glow(self, color, radius):
+        if color is None:
+            self.glow = False
+            self.glow_color = QColor(255, 255, 255)
+            self._glow_effect.setEnabled(False)
+        else:
+            self.glow = True
+            self.glow_color = color
+            self.glow_radius = radius
+            self._glow_effect.setColor(color)
+            self._glow_effect.setBlurRadius(radius)
+            self._glow_effect.setEnabled(True)
         self.update()
 
     def paint(   
