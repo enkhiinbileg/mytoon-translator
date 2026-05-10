@@ -98,5 +98,3 @@ class RestoreController(QtCore.QObject):
         # Use PatchRemoveCommand for Undo/Redo support
         command = PatchRemoveCommand(self.main, patch_item, file_path)
         self.main.push_command(command)
-        
-        MMessage.success(text="Removed patch", parent=self.main)

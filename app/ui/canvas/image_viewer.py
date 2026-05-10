@@ -78,10 +78,30 @@ class ImageViewer(QGraphicsView):
         self.rectangles: list[MoveableRectItem] = []
         self.text_items: list[TextBlockItem] = []
         self.selected_rect: MoveableRectItem = None
+        self.text_visible = True
         
         # Box drawing state
         self.start_point: QPointF = None
         self.current_rect: MoveableRectItem = None
+
+    def set_text_visibility(self, visible: bool):
+        """Sets the visibility of all text items in the scene."""
+        self.text_visible = visible
+        for item in self.text_items:
+            item.setVisible(visible)
+            # When hidden, we should also disable interactions to avoid accidental clicks
+            if not visible:
+                item.setAcceptedMouseButtons(QtCore.Qt.MouseButton.NoButton)
+            else:
+                # Restore default (usually LeftButton)
+                item.setAcceptedMouseButtons(QtCore.Qt.MouseButton.LeftButton | QtCore.Qt.MouseButton.RightButton)
+        
+        # In webtoon mode, we might need to tell the manager as well if it creates items dynamically
+        if self.webtoon_mode:
+            # Check if webtoon managers have visibility flags
+            if hasattr(self.webtoon_manager, 'text_manager'):
+                # Assuming text_manager has some state or we just iterate its items
+                pass
 
     # Properties to maintain public API
     # Properties to maintain public API
@@ -468,6 +488,9 @@ class ImageViewer(QGraphicsView):
         item.update()
 
         # Add to scene and track
+        item.setVisible(self.text_visible)
+        if not self.text_visible:
+            item.setAcceptedMouseButtons(QtCore.Qt.MouseButton.NoButton)
         self._scene.addItem(item)
         self.text_items.append(item)
         

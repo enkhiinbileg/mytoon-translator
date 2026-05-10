@@ -79,6 +79,14 @@ class WorkspaceMixin:
         self.compare_toggle.setToolTip(self.tr("Compare Mode: Side-by-side original and edited view"))
         self.compare_toggle.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
 
+        self.text_visibility_toggle = MToolButton()
+        self.text_visibility_toggle.set_dayu_svg("mdi--comic-thought-bubble-outline.svg")
+        self.text_visibility_toggle.huge()
+        self.text_visibility_toggle.setCheckable(True)
+        self.text_visibility_toggle.setChecked(True) # Visible by default
+        self.text_visibility_toggle.setToolTip(self.tr("Toggle Text Visibility"))
+        self.text_visibility_toggle.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+
         self.translate_button = MPushButton(self.tr("Translate All"))
         self.translate_button.setEnabled(True)
         self.translate_button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
@@ -99,6 +107,7 @@ class WorkspaceMixin:
         header_layout.addStretch()
         header_layout.addWidget(self.webtoon_toggle)
         header_layout.addWidget(self.compare_toggle)
+        header_layout.addWidget(self.text_visibility_toggle)
         header_layout.addWidget(self.manual_radio)
         header_layout.addWidget(self.automatic_radio)
         header_layout.addWidget(self.translate_button)

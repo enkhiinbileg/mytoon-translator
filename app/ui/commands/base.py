@@ -130,11 +130,15 @@ class RectCommandBase:
     
     @staticmethod
     def save_blk_properties(blk):
+        if blk is None:
+            return None
         prp = blk.__dict__
         return prp
     
     @staticmethod
     def find_matching_blk(blk_list, properties):
+        if properties is None:
+            return None
         for blk in blk_list:
             # Get current block's properties
             current_props = blk.__dict__.copy()

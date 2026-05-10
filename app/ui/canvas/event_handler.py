@@ -213,7 +213,20 @@ class EventHandler:
                         sel_item.last_selection = current_selection
                     except Exception:
                         pass
-                return 
+        
+        # Tool release handlers - must run even if interaction_finished is True
+        # to ensure preview rectangles are always cleaned up
+        if self.viewer.current_tool == 'inpaint_rect':
+            self._release_handle_inpaint_rect()
+        elif self.viewer.current_tool == 'rect_clean':
+            self._release_handle_rect_clean()
+        elif self.viewer.current_tool == 'box':
+            self._release_handle_box_creation()
+        elif self.viewer.current_tool in ['brush', 'eraser']:
+            self.viewer.drawing_manager.end_stroke()
+
+        if interaction_finished:
+            return 
 
         # Let QGraphicsView handle its release events (e.g., for ScrollHandDrag)
         QtWidgets.QGraphicsView.mouseReleaseEvent(self.viewer, event)
@@ -221,18 +234,6 @@ class EventHandler:
         if event.button() == Qt.MiddleButton:
             self._release_handle_pan()
             return
-        
-        if self.viewer.current_tool in ['brush', 'eraser']:
-            self.viewer.drawing_manager.end_stroke()
-            
-        if self.viewer.current_tool == 'box':
-            self._release_handle_box_creation()
-            
-        if self.viewer.current_tool == 'rect_clean':
-            self._release_handle_rect_clean()
-
-        if self.viewer.current_tool == 'inpaint_rect':
-            self._release_handle_inpaint_rect()
 
     def handle_wheel(self, event: QtGui.QWheelEvent):
         if not self.viewer.hasPhoto(): 
@@ -336,6 +337,32 @@ class EventHandler:
 
         local_pos = sel_item.mapFromScene(scene_pos)
         if sel_item.boundingRect().contains(local_pos):
+            # Duplicate on Alt+Drag
+            if event.modifiers() == QtCore.Qt.KeyboardModifier.AltModifier:
+                if isinstance(sel_item, TextBlockItem):
+                    from app.ui.canvas.text.text_item_properties import TextItemProperties
+                    from app.ui.commands.box import AddTextItemCommand
+                    import uuid
+
+                    # 1. Clone properties from current item
+                    props = TextItemProperties.from_text_item(sel_item)
+                    # Assign a new UUID for the clone
+                    props.uuid = str(uuid.uuid4())
+                    props.block_id = -1 # New item, no block ID yet
+                    
+                    # 2. Create the new item via viewer
+                    new_item = self.viewer.add_text_item(props)
+                    
+                    # 3. Register the creation in undo stack
+                    if hasattr(self.viewer, 'main'):
+                        command = AddTextItemCommand(self.viewer.main, new_item)
+                        self.viewer.command_emitted.emit(command)
+                    
+                    # 4. Deselect original and select the new clone for dragging
+                    self.viewer.deselect_all()
+                    new_item.setSelected(True)
+                    sel_item = new_item
+
             self.dragged_item = sel_item
             # Store the initial position for drag calculations
             self.last_scene_pos = scene_pos
@@ -579,8 +606,14 @@ class EventHandler:
             if rect.width() > 0 and rect.height() > 0:
                 scene_rect = self.viewer.current_rect.mapRectToScene(rect)
                 self.viewer.inpaint_rect_requested.emit(scene_rect)
-            self.viewer._scene.removeItem(self.viewer.current_rect)
-        self.viewer.current_rect = None
+            
+            # Forcibly remove from scene and clear reference
+            try:
+                if self.viewer.current_rect.scene():
+                    self.viewer.current_rect.scene().removeItem(self.viewer.current_rect)
+            except Exception:
+                pass
+            self.viewer.current_rect = None
 
     def _handle_pan_gesture(self, gesture):
         delta = gesture.delta().toPoint()

@@ -210,6 +210,9 @@ class ComicTranslate(ComicTranslateUI):
         # Compare mode toggle
         self.compare_toggle.toggled.connect(self.compare_ctrl.toggle_compare_mode)
 
+        # Text visibility toggle
+        self.text_visibility_toggle.toggled.connect(self.image_viewer.set_text_visibility)
+
         # Connect buttons from button_groups
         self.hbutton_group.get_button_group().buttons()[0].clicked.connect(lambda: self.block_detect())
         self.hbutton_group.get_button_group().buttons()[1].clicked.connect(self.ocr)
@@ -500,7 +503,7 @@ class ComicTranslate(ComicTranslateUI):
         return targets
 
     def delete_selected_box(self):
-        targets = [target for target in self._selected_delete_targets() if target[2] is not None]
+        targets = [target for target in self._selected_delete_targets() if target[0] is not None or target[1] is not None]
         if not targets:
             return
 
