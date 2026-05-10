@@ -66,6 +66,14 @@ class ShortcutController:
             "toggle_rect_clean": self._toggle_rect_clean,
             "toggle_inpaint_rect": self._toggle_inpaint_rect,
             "toggle_patch_restore": self._toggle_patch_restore,
+            "increase_outline_width": self._increase_outline_width,
+            "decrease_outline_width": self._decrease_outline_width,
+            "toggle_outline": self._toggle_outline,
+            "outline_white": self._outline_white,
+            "outline_black": self._outline_black,
+            "outline_color_picker": self._outline_color_picker,
+            "copy_style": self._copy_style,
+            "paste_style": self._paste_style,
         }
         handler = handlers.get(shortcut_id)
         if handler is not None:
@@ -95,6 +103,51 @@ class ShortcutController:
             return
         new_tool = None if self.main.image_viewer.current_tool == "patch_restore" else "patch_restore"
         self.main.set_tool(new_tool)
+
+    def _increase_outline_width(self) -> None:
+        if self._is_text_input_focused():
+            return
+        current = float(self.main.outline_width_dropdown.currentText())
+        self.main.outline_width_dropdown.setCurrentText(str(round(min(10.0, current + 0.2), 2)))
+
+    def _decrease_outline_width(self) -> None:
+        if self._is_text_input_focused():
+            return
+        current = float(self.main.outline_width_dropdown.currentText())
+        self.main.outline_width_dropdown.setCurrentText(str(round(max(0.1, current - 0.2), 2)))
+
+    def _toggle_outline(self) -> None:
+        if self._is_text_input_focused():
+            return
+        current = self.main.outline_checkbox.isChecked()
+        self.main.outline_checkbox.setChecked(not current)
+
+    def _outline_white(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.outline_checkbox.setChecked(True)
+        self.main.text_ctrl.apply_outline_color("#ffffff")
+
+    def _outline_black(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.outline_checkbox.setChecked(True)
+        self.main.text_ctrl.apply_outline_color("#000000")
+
+    def _outline_color_picker(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.text_ctrl.on_outline_color_change()
+
+    def _copy_style(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.text_ctrl.copy_style()
+
+    def _paste_style(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.text_ctrl.paste_style()
 
     def _workspace_is_active(self) -> bool:
         try:

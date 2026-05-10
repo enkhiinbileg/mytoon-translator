@@ -310,7 +310,9 @@ def main():
                     # Offer recovery only on plain startup (no explicit project open request).
                     self._ct.project_ctrl.prompt_restore_recovery_if_available()
             except Exception as e:
+                import traceback
                 logging.error(f"Error during UI initialization: {e}")
+                traceback.print_exc()
                 splash.close()
                 app.quit()
 

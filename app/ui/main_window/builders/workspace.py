@@ -294,12 +294,15 @@ class WorkspaceMixin:
         self.outline_width_dropdown = MComboBox().small()
         self.outline_width_dropdown.setFixedWidth(60)
         self.outline_width_dropdown.setToolTip(self.tr("Outline Width"))
-        self.outline_width_dropdown.addItems(["1.0", "1.15", "1.3", "1.4", "1.5"])
+        self.outline_width_dropdown.addItems(["1.0", "1.5", "2.0", "2.5", "3.0", "4.0", "5.0", "7.5", "10.0"])
         self.outline_width_dropdown.set_editable(True)
 
         outline_settings_layout.addWidget(self.outline_checkbox)
         outline_settings_layout.addWidget(self.outline_font_color_button)
         outline_settings_layout.addWidget(self.outline_width_dropdown)
+        
+        self.outline_font_color_button.setEnabled(True)
+        self.outline_width_dropdown.setEnabled(True)
         outline_settings_layout.addStretch()
 
         rendering_divider_top = MDivider()

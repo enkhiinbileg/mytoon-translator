@@ -13,6 +13,8 @@ from app.ui.commands.box import AddTextItemCommand, ResizeBlocksCommand
 from app.ui.commands.text_edit import TextEditCommand
 from app.ui.canvas.text_item import TextBlockItem
 from app.ui.canvas.text.text_item_properties import TextItemProperties
+from app.ui.dayu_widgets.message import MMessage
+from app.ui.dayu_widgets import dayu_theme
 
 from modules.utils.textblock import TextBlock
 from modules.rendering.render import TextRenderingSettings, manual_wrap, is_vertical_block, pyside_word_wrap
@@ -28,6 +30,7 @@ if TYPE_CHECKING:
 class TextController:
     def __init__(self, main: ComicTranslate):
         self.main = main
+        self._copied_style = {}  # Store copied style
 
         # List of widgets to block signals for during manual rendering
         self.widgets_to_block = [
@@ -493,17 +496,28 @@ class TextController:
             self.main.push_command(command)
 
     def on_font_color_change(self):
-        font_color = self.main.get_color()
-        if font_color and font_color.isValid():
-            self.main.block_font_color_button.setStyleSheet(
-                f"background-color: {font_color.name()}; border: none; border-radius: 5px;"
-            )
-            self.main.block_font_color_button.setProperty('selected_color', font_color.name())
+        current_color = self.main.block_font_color_button.property('selected_color')
+        
+        def live_preview(color):
+            if self._selected_text_items() and color.isValid():
+                for item in self._selected_text_items():
+                    item.set_color(color)
+
+        new_color = self.main.get_color(initial_color=current_color, live_preview_callback=live_preview)
+        
+        if new_color and new_color.isValid():
+            self.main.block_font_color_button.setStyleSheet(f"background-color: {new_color.name()}; border: none; border-radius: 5px;")
+            self.main.block_font_color_button.setProperty('selected_color', new_color.name())
             if self._selected_text_items():
                 self._apply_format_to_selected(
                     "change_text_color",
-                    lambda item: item.set_color(font_color),
+                    lambda item: item.set_color(new_color),
                 )
+        elif self._selected_text_items():
+            # Revert to old color on cancel
+            old_color = QColor(current_color)
+            for item in self._selected_text_items():
+                item.set_color(old_color)
 
     def left_align(self):
         if self.main.curr_tblock_item:
@@ -557,23 +571,36 @@ class TextController:
             self.main.push_command(command)
 
     def on_outline_color_change(self):
-        outline_color = self.main.get_color()
-        if outline_color and outline_color.isValid():
+        current_color = self.main.outline_font_color_button.property('selected_color')
+        outline_width = float(self.main.outline_width_dropdown.currentText())
+
+        def live_preview(color):
+            if color.isValid():
+                if self.main.curr_tblock_item:
+                    self.main.curr_tblock_item.set_outline(color, outline_width)
+                # Auto check when picking color
+                self.main.outline_checkbox.setChecked(True)
+
+        new_color = self.main.get_color(initial_color=current_color, live_preview_callback=live_preview)
+        
+        if new_color and new_color.isValid():
+            self.main.outline_checkbox.setChecked(True)
             self.main.outline_font_color_button.setStyleSheet(
-                f"background-color: {outline_color.name()}; border: none; border-radius: 5px;"
+                f"background-color: {new_color.name()}; border: none; border-radius: 5px;"
             )
-            self.main.outline_font_color_button.setProperty('selected_color', outline_color.name())
-            outline_width = float(self.main.outline_width_dropdown.currentText())
-
-            if self.main.curr_tblock_item and self.main.outline_checkbox.isChecked():
+            self.main.outline_font_color_button.setProperty('selected_color', new_color.name())
+            if self.main.curr_tblock_item:
                 old_item = copy.copy(self.main.curr_tblock_item)
-                self.main.curr_tblock_item.set_outline(outline_color, outline_width)
-
+                self.main.curr_tblock_item.set_outline(new_color, outline_width)
                 command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
                 self.main.push_command(command)
+        elif self.main.curr_tblock_item and self.main.outline_checkbox.isChecked():
+            # Revert to old color on cancel
+            self.main.curr_tblock_item.set_outline(QColor(current_color), outline_width)
 
     def on_outline_width_change(self, outline_width):
-        if self.main.curr_tblock_item and self.main.outline_checkbox.isChecked():
+        self.main.outline_checkbox.setChecked(True)
+        if self.main.curr_tblock_item:
             old_item = copy.copy(self.main.curr_tblock_item)
             outline_width = float(self.main.outline_width_dropdown.currentText())
             color_str = self.main.outline_font_color_button.property('selected_color')
@@ -583,8 +610,24 @@ class TextController:
             command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
             self.main.push_command(command)
 
+    def apply_outline_color(self, color_hex: str):
+        color = QColor(color_hex)
+        self.main.outline_checkbox.setChecked(True)
+        self.main.outline_font_color_button.setStyleSheet(
+            f"background-color: {color.name()}; border: none; border-radius: 5px;"
+        )
+        self.main.outline_font_color_button.setProperty('selected_color', color.name())
+        outline_width = float(self.main.outline_width_dropdown.currentText())
+
+        if self.main.curr_tblock_item:
+            old_item = copy.copy(self.main.curr_tblock_item)
+            self.main.curr_tblock_item.set_outline(color, outline_width)
+            command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
+            self.main.push_command(command)
+
     def toggle_outline_settings(self, state):
         enabled = True if state == 2 else False
+        
         if self.main.curr_tblock_item:
             if not enabled:
                 self.main.curr_tblock_item.set_outline(None, None)
@@ -597,6 +640,56 @@ class TextController:
 
                 command = TextFormatCommand(self.main.image_viewer, old_item, self.main.curr_tblock_item)
                 self.main.push_command(command)
+
+    def copy_style(self):
+        if self.main.curr_tblock_item:
+            item = self.main.curr_tblock_item
+            self._copied_style = {
+                'font_family': item.font_family,
+                'font_size': item.font_size,
+                'text_color': item.text_color,
+                'bold': item.bold,
+                'italic': item.italic,
+                'underline': item.underline,
+                'alignment': item.alignment,
+                'line_spacing': item.line_spacing,
+                'outline_color': item.outline_color,
+                'outline_width': item.outline_width
+            }
+            MMessage.config(dayu_theme.success)
+            MMessage.success(self.main.tr("Style Copied"), parent=self.main, duration=1)
+
+    def paste_style(self):
+        if not self._copied_style or not self._selected_text_items():
+            return
+        
+        style = self._copied_style
+        for item in self._selected_text_items():
+            old_item = copy.copy(item)
+            
+            if 'font_family' in style: item.set_font(style['font_family'], style['font_size'])
+            if 'text_color' in style: item.set_color(style['text_color'])
+            if 'bold' in style: 
+                item.bold = style['bold']
+                item.update_text_format('bold', style['bold'])
+            if 'italic' in style: 
+                item.italic = style['italic']
+                item.update_text_format('italic', style['italic'])
+            if 'underline' in style: 
+                item.underline = style['underline']
+                item.update_text_format('underline', style['underline'])
+            if 'alignment' in style: item.set_alignment(style['alignment'])
+            if 'line_spacing' in style: item.set_line_spacing(style['line_spacing'])
+            if 'outline_color' in style: item.set_outline(style['outline_color'], style['outline_width'])
+            
+            command = TextFormatCommand(self.main.image_viewer, old_item, item)
+            self.main.push_command(command)
+        
+        MMessage.config(dayu_theme.success)
+        MMessage.success(self.main.tr("Style Pasted"), parent=self.main, duration=1)
+        # Update toolbar to reflect pasted style
+        if self.main.curr_tblock_item:
+            self.on_text_item_selected(self.main.curr_tblock_item)
 
     # Widget helpers
     def block_text_item_widgets(self, widgets):

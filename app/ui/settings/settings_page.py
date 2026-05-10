@@ -88,6 +88,8 @@ class SettingsPage(QtWidgets.QWidget):
         self.ui.buy_credits_button.clicked.connect(self.open_pricing_page)
         self.ui.sign_out_button.clicked.connect(self.sign_out)
         self.ui.check_update_button.clicked.connect(self.check_for_updates)
+        self.ui.color_button.clicked.connect(lambda: self.select_color(outline=False))
+        self.ui.outline_color_button.clicked.connect(lambda: self.select_color(outline=True))
 
         # AuthClient connections
         self.auth_client.auth_success.connect(self.handle_auth_success)
@@ -99,8 +101,14 @@ class SettingsPage(QtWidgets.QWidget):
         self._sync_extra_context_limit(self.ui.translator_combo.currentText())
 
     def _sync_extra_context_limit(self, translator: str) -> None:
-        normalized = self.ui.reverse_mappings.get(translator, translator)
-        self.ui.llms_page.set_extra_context_unlimited(normalized == "Custom")
+        if not hasattr(self, 'ui') or self.ui is None:
+            return
+        reverse_mappings = getattr(self.ui, 'reverse_mappings', {})
+        if reverse_mappings is None:
+            reverse_mappings = {}
+        normalized = reverse_mappings.get(translator, translator)
+        if hasattr(self.ui, 'llms_page') and self.ui.llms_page is not None:
+            self.ui.llms_page.set_extra_context_unlimited(normalized == "Custom")
 
     def on_theme_changed(self, theme: str):
         self.theme_changed.emit(theme)
@@ -152,6 +160,18 @@ class SettingsPage(QtWidgets.QWidget):
             'project_autosave_enabled': autosave_enabled,
             'project_autosave_interval_min': int(self.ui.project_autosave_interval_spinbox.value()),
             'project_autosave_folder': autosave_folder,
+        }
+        return settings
+    
+    def get_text_rendering_settings(self):
+        return {
+            'min_font_size': self.ui.min_font_spinbox.value(),
+            'max_font_size': self.ui.max_font_spinbox.value(),
+            'upper_case': self.ui.uppercase_checkbox.isChecked(),
+            'color': self.ui.color_button.property('selected_color'),
+            'outline': self.ui.outline_checkbox.isChecked(),
+            'outline_color': self.ui.outline_color_button.property('selected_color'),
+            'outline_width': self.ui.outline_width_spinbox.value(),
         }
         return settings
 
@@ -214,7 +234,8 @@ class SettingsPage(QtWidgets.QWidget):
             'shortcuts': self.ui.shortcuts_page.get_shortcuts(),
             'credentials': self.get_credentials(),
             'save_keys': self.ui.save_keys_checkbox.isChecked(),
-            'user_info': self.get_user_info()
+            'user_info': self.get_user_info(),
+            'text_rendering': self.get_text_rendering_settings()
         }
 
     def on_shortcut_changed(self, shortcut_id: str, sequence: str) -> None:
@@ -398,13 +419,31 @@ class SettingsPage(QtWidgets.QWidget):
         if title_bar is not None:
             title_bar.set_autosave_checked(bool(autosave_enabled))
         self.ui.project_autosave_interval_spinbox.setValue(
-            settings.value('project_autosave_interval_min', 3, type=int)
+            settings.value('project_autosave_interval_min', 10, type=int)
         )
         self.ui.project_autosave_folder_input.setText(
-            settings.value('project_autosave_folder', get_default_project_autosave_dir(), type=str)
+            settings.value('project_autosave_folder', '')
         )
+        settings.endGroup()
 
-        settings.endGroup()  # export
+        # Load text rendering settings
+        settings.beginGroup('text_rendering')
+        self.ui.min_font_spinbox.setValue(int(settings.value('min_font_size', 5)))
+        self.ui.max_font_spinbox.setValue(int(settings.value('max_font_size', 40)))
+        self.ui.uppercase_checkbox.setChecked(settings.value('upper_case', False, type=bool))
+        
+        color = settings.value('color', '#000000')
+        self.ui.color_button.setStyleSheet(f"background-color: {color}; border: none; border-radius: 5px;")
+        self.ui.color_button.setProperty('selected_color', color)
+        
+        self.ui.outline_checkbox.setChecked(settings.value('outline', True, type=bool))
+        
+        outline_color = settings.value('outline_color', '#FFFFFF')
+        self.ui.outline_color_button.setStyleSheet(f"background-color: {outline_color}; border: none; border-radius: 5px;")
+        self.ui.outline_color_button.setProperty('selected_color', outline_color)
+        
+        self.ui.outline_width_spinbox.setValue(float(settings.value('outline_width', 1.0)))
+        settings.endGroup()
 
         settings.beginGroup('shortcuts')
         default_shortcuts = get_default_shortcuts()

@@ -71,31 +71,6 @@ class ComicTranslateUI(
             self._win_snap_style_applied = False
         self.setWindowTitle("Comic Translate[*]")
 
-        screen = QtWidgets.QApplication.primaryScreen()
-        geo = screen.geometry()
-
-        width = float(geo.width())
-        height = float(geo.height())
-        x = 50
-        y = 50
-        w = int(width / 1.2)
-        h = int(height / 1.2)
-        self.setGeometry(x, y, w, h)
-
-        self.image_viewer = ImageViewer(self)
-        self.settings_page = SettingsPage(self)
-        self.settings_page.theme_changed.connect(self.apply_theme)
-        self.settings_page.font_imported.connect(self.set_font)
-        self.main_content_widget = None
-        self._workspace_initialized = False
-        self.tool_buttons = {}
-        self.page_list = PageListView()
-
-        self.webtoon_mode = False
-
-        self.grabGesture(QtCore.Qt.GestureType.PanGesture)
-        self.grabGesture(QtCore.Qt.GestureType.PinchGesture)
-
         self.lang_mapping = {
             self.tr("English"): "English",
             self.tr("Korean"): "Korean",
@@ -127,6 +102,31 @@ class ComicTranslateUI(
             self.tr("Mongolian"): "Mongolian",
         }
         self.reverse_lang_mapping = {v: k for k, v in self.lang_mapping.items()}
+
+        screen = QtWidgets.QApplication.primaryScreen()
+        geo = screen.geometry()
+
+        width = float(geo.width())
+        height = float(geo.height())
+        x = 50
+        y = 50
+        w = int(width / 1.2)
+        h = int(height / 1.2)
+        self.setGeometry(x, y, w, h)
+
+        self.image_viewer = ImageViewer(self)
+        self.settings_page = SettingsPage(self)
+        self.settings_page.theme_changed.connect(self.apply_theme)
+        self.settings_page.font_imported.connect(self.set_font)
+        self.main_content_widget = None
+        self._workspace_initialized = False
+        self.tool_buttons = {}
+        self.page_list = PageListView()
+
+        self.webtoon_mode = False
+
+        self.grabGesture(QtCore.Qt.GestureType.PanGesture)
+        self.grabGesture(QtCore.Qt.GestureType.PinchGesture)
 
         self.button_to_alignment = {
             0: QtCore.Qt.AlignmentFlag.AlignLeft,

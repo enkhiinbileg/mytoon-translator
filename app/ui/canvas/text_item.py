@@ -434,14 +434,12 @@ class TextBlockItem(QGraphicsTextItem):
                 fmt.setForeground(outline_info.color)
                 cursor.mergeCharFormat(fmt)
 
-                # Draw the outline for this selection
-                offsets = [(dx, dy) 
-                    for dx in (-outline_info.width, 0, outline_info.width)
-                    for dy in (-outline_info.width, 0, outline_info.width)
-                    if dx != 0 or dy != 0
-                ]
-                
-                for dx, dy in offsets:
+                # Draw the outline for this selection using circular offsets for smoothness
+                num_steps = max(8, int(outline_info.width * 3))
+                for i in range(num_steps):
+                    angle = (i / num_steps) * 2 * math.pi
+                    dx = outline_info.width * math.cos(angle)
+                    dy = outline_info.width * math.sin(angle)
                     painter.save()
                     painter.translate(dx, dy)
                     doc.drawContents(painter)

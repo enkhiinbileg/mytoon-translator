@@ -194,12 +194,21 @@ class ToolStateMixin:
         if os.path.splitext(font_input)[1].lower() in [".ttf", ".ttc", ".otf", ".woff", ".woff2"]:
             self._load_custom_font_file(font_input)
 
-    def get_color(self):
-        default_color = QtGui.QColor("#000000")
-        color_dialog = QtWidgets.QColorDialog()
-        color_dialog.setCurrentColor(default_color)
+    def get_color(self, initial_color=None, live_preview_callback=None):
+        if initial_color is None:
+            initial_color = QtGui.QColor("#000000")
+        elif isinstance(initial_color, str):
+            initial_color = QtGui.QColor(initial_color)
+            
+        color_dialog = QtWidgets.QColorDialog(self)
+        color_dialog.setCurrentColor(initial_color)
+        
+        if live_preview_callback:
+            color_dialog.currentColorChanged.connect(live_preview_callback)
+            
         if color_dialog.exec() == QtWidgets.QDialog.Accepted:
             return color_dialog.selectedColor()
+        return None
 
     def set_font(self, font_family: str):
         resolved_family = self.ensure_custom_font_loaded(font_family)

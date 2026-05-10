@@ -1391,8 +1391,11 @@ class ProjectController:
 
         settings.beginGroup("main_page")
         # Save languages in English
-        settings.setValue("source_language", self.main.lang_mapping.get(self.main.s_combo.currentText(), self.main.s_combo.currentText()))
-        settings.setValue("target_language", self.main.lang_mapping.get(self.main.t_combo.currentText(), self.main.t_combo.currentText()))
+        lang_mapping = getattr(self.main, 'lang_mapping', {})
+        if lang_mapping is None:
+            lang_mapping = {}
+        settings.setValue("source_language", lang_mapping.get(self.main.s_combo.currentText(), self.main.s_combo.currentText()))
+        settings.setValue("target_language", lang_mapping.get(self.main.t_combo.currentText(), self.main.t_combo.currentText()))
 
         settings.setValue("mode", "manual" if self.main.manual_radio.isChecked() else "automatic")
 
@@ -1417,8 +1420,11 @@ class ProjectController:
         target_lang = settings.value("target_language", "English")
 
         # Use reverse mapping to get the translated language names
-        self.main.s_combo.setCurrentText(self.main.reverse_lang_mapping.get(source_lang, self.main.tr("Korean")))
-        self.main.t_combo.setCurrentText(self.main.reverse_lang_mapping.get(target_lang, self.main.tr("English")))
+        reverse_mapping = getattr(self.main, 'reverse_lang_mapping', {})
+        if reverse_mapping is None:
+            reverse_mapping = {}
+        self.main.s_combo.setCurrentText(reverse_mapping.get(source_lang, self.main.tr("Korean")))
+        self.main.t_combo.setCurrentText(reverse_mapping.get(target_lang, self.main.tr("English")))
 
         mode = settings.value("mode", "manual")
         if mode == "manual":
