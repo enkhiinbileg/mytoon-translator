@@ -56,7 +56,7 @@ class MColorChart(QtWidgets.QWidget):
     def slot_copy_color(self, button):
         color = button.property("color")
         QtWidgets.QApplication.clipboard().setText(color)
-        MMessage.success("copied: {}".format(color), parent=self)
+        MMessage.success("copied: {}".format(color), parent=self, duration=1)
 
 
 class MColorPaletteDialog(QtWidgets.QDialog):

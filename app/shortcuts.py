@@ -146,6 +146,48 @@ SHORTCUT_DEFINITIONS: tuple[ShortcutDefinition, ...] = (
         description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Paste the copied style onto the selected text."),
         default="Ctrl+Shift+V",
     ),
+    ShortcutDefinition(
+        id="toggle_text_visibility",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Toggle Text Visibility"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Toggle the visibility of translated text items."),
+        default="H",
+    ),
+    ShortcutDefinition(
+        id="scroll_to_top",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Scroll to Top of Page"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Scroll the view to the top of the current page."),
+        default="E",
+    ),
+    ShortcutDefinition(
+        id="next_page",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Next Page"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Go to the next page in the project."),
+        default="PageDown",
+    ),
+    ShortcutDefinition(
+        id="previous_page",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Previous Page"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Go to the previous page in the project."),
+        default="PageUp",
+    ),
+    ShortcutDefinition(
+        id="toggle_webtoon_mode",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Toggle Webtoon Mode"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Toggle the vertical webtoon reading mode."),
+        default="W",
+    ),
+    ShortcutDefinition(
+        id="toggle_magic_wand",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Toggle Magic Wand Tool"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Activate the manual magic wand tool."),
+        default="M",
+    ),
+    ShortcutDefinition(
+        id="magic_wand_all",
+        label=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Magic Wand All"),
+        description=QT_TRANSLATE_NOOP("ShortcutDefinitions", "Clean all text blocks across all pages in the project."),
+        default="Shift+M",
+    ),
 )
 
 

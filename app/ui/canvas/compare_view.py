@@ -74,10 +74,6 @@ class CompareView(QtWidgets.QSplitter):
                 target_viewer.verticalScrollBar().blockSignals(False)
                 target_viewer.horizontalScrollBar().blockSignals(False)
             
-            # Logging for debugging
-            t_center = target_viewer.mapToScene(target_viewer.viewport().rect().center())
-            print(f"Sync Matrix: Scale={source_transform.m11():.4f} | Viewports: Src Y={scene_center.y():.2f}, Tgt Y={t_center.y():.2f}")
-            
             if target_viewer.webtoon_mode:
                 target_viewer.webtoon_manager._update_loaded_pages()
             target_viewer.update()
@@ -98,10 +94,20 @@ class CompareView(QtWidgets.QSplitter):
                     self._syncing = False
                     self.sync_viewports(self.main.image_viewer, self.original_viewer)
                     self._syncing = True
+                    
+                    # Trigger lazy loading for both viewers after scroll
+                    QtCore.QTimer.singleShot(250, self._update_both_lazy_loaders)
                 finally:
                     self._syncing = False
                 return True
         return super().eventFilter(source, event)
+
+    def _update_both_lazy_loaders(self):
+        """Trigger lazy page loading for both viewers after scroll."""
+        if hasattr(self.main.image_viewer, 'webtoon_manager'):
+            self.main.image_viewer.webtoon_manager._update_loaded_pages()
+        if hasattr(self.original_viewer, 'webtoon_manager'):
+            self.original_viewer.webtoon_manager._update_loaded_pages()
 
     def resizeEvent(self, event):
         """Handle splitter resize and ensure viewers are updated."""

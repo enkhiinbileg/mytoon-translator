@@ -21,7 +21,7 @@ class RestoreController(QtCore.QObject):
         file_path = self.main.image_files[page_idx]
         self._restore_page_by_path(file_path, page_idx)
         
-        MMessage.success(text=f"Restored original image for page {page_idx + 1}", parent=self.main)
+        MMessage.success(text=f"Restored original image for page {page_idx + 1}", parent=self.main, duration=1)
 
     def restore_all_pages(self):
         """Restores the original images for all pages in the project."""
@@ -39,7 +39,7 @@ class RestoreController(QtCore.QObject):
         def on_finished(count):
             self.main.loading.setVisible(False)
             self.main.enable_hbutton_group()
-            MMessage.success(text=f"Restored original images for all {count} pages", parent=self.main)
+            MMessage.success(text=f"Restored original images for all {count} pages", parent=self.main, duration=1)
 
         # Run in thread if there are many pages to avoid UI freeze
         if len(self.main.image_files) > 5:

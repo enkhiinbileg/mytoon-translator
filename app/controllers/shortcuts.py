@@ -80,6 +80,13 @@ class ShortcutController:
             "glow_color_picker": self._glow_color_picker,
             "copy_style": self._copy_style,
             "paste_style": self._paste_style,
+            "toggle_text_visibility": self._toggle_text_visibility,
+            "scroll_to_top": self._scroll_to_top,
+            "next_page": self._next_page,
+            "previous_page": self._previous_page,
+            "toggle_webtoon_mode": self._toggle_webtoon_mode,
+            "toggle_magic_wand": self._toggle_magic_wand,
+            "magic_wand_all": self._magic_wand_all,
         }
         handler = handlers.get(shortcut_id)
         if handler is not None:
@@ -103,6 +110,17 @@ class ShortcutController:
             return
         new_tool = None if self.main.image_viewer.current_tool == "inpaint_rect" else "inpaint_rect"
         self.main.set_tool(new_tool)
+
+    def _toggle_magic_wand(self) -> None:
+        if self._is_text_input_focused():
+            return
+        new_tool = None if self.main.image_viewer.current_tool == "magic_wand" else "magic_wand"
+        self.main.set_tool(new_tool)
+
+    def _magic_wand_all(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.batch_text_ctrl.magic_wand_all()
 
     def _toggle_patch_restore(self) -> None:
         if self._is_text_input_focused():
@@ -187,6 +205,37 @@ class ShortcutController:
         if self._is_text_input_focused():
             return
         self.main.text_ctrl.paste_style()
+
+    def _toggle_text_visibility(self) -> None:
+        if self._is_text_input_focused():
+            return
+        current = self.main.text_visibility_toggle.isChecked()
+        self.main.text_visibility_toggle.setChecked(not current)
+
+    def _scroll_to_top(self) -> None:
+        if self._is_text_input_focused():
+            return
+        if self.main.webtoon_mode:
+            self.main.image_viewer.scroll_to_page(self.main.curr_img_idx, 'top')
+        else:
+            self.main.image_viewer.verticalScrollBar().setValue(0)
+            self.main.image_viewer.horizontalScrollBar().setValue(0)
+
+    def _next_page(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.image_ctrl.navigate_images(1)
+
+    def _previous_page(self) -> None:
+        if self._is_text_input_focused():
+            return
+        self.main.image_ctrl.navigate_images(-1)
+
+    def _toggle_webtoon_mode(self) -> None:
+        if self._is_text_input_focused():
+            return
+        current = self.main.webtoon_toggle.isChecked()
+        self.main.webtoon_toggle.setChecked(not current)
 
     def _workspace_is_active(self) -> bool:
         try:

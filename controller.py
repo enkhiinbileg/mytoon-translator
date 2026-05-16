@@ -901,6 +901,15 @@ class ComicTranslate(ComicTranslateUI):
                 # Do not change the main window loading spinner here; it's managed by the running task lifecycle
 
     def keyPressEvent(self, event):
+        # Ctrl+S — Save Project
+        if event.modifiers() == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_S:
+            self.project_ctrl.thread_save_project()
+            return
+        # Ctrl+Shift+S — Save Project As
+        if (event.modifiers() == (QtCore.Qt.ControlModifier | QtCore.Qt.ShiftModifier)
+                and event.key() == QtCore.Qt.Key_S):
+            self.project_ctrl.thread_save_as_project()
+            return
         if event.key() == QtCore.Qt.Key_Left:
             self.image_ctrl.navigate_images(-1)
         elif event.key() == QtCore.Qt.Key_Right:

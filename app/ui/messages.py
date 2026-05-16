@@ -17,7 +17,7 @@ class Messages:
                 "Comic has been Translated!"
             ),
             parent=parent,
-            duration=None,
+            duration=1,
             closable=True
         )
 

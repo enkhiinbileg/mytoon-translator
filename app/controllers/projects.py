@@ -1186,7 +1186,7 @@ class ProjectController:
             MMessage.success(
                 self.main.tr("Project file updated."),
                 parent=self.main,
-                duration=2,
+                duration=1,
             )
 
         self.run_save_proj(target_path, post_save_callback=_post_save)
@@ -1209,6 +1209,7 @@ class ProjectController:
                 self.main.tr("Project File"),
                 self.main.tr(
                     "Could not move the project file.\n\n{error}"
+                    
                 ).format(error=str(exc)),
             )
             return False
@@ -1226,7 +1227,7 @@ class ProjectController:
         MMessage.success(
             action_text,
             parent=self.main,
-            duration=2,
+            duration=1,
         )
         return True
 

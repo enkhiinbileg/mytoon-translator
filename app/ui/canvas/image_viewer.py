@@ -204,7 +204,7 @@ class ImageViewer(QGraphicsView):
             self.viewport().setCursor(cursor)
         elif tool == 'magic_wand':
             self.setDragMode(QGraphicsView.NoDrag)
-            self.viewport().setCursor(Qt.CursorShape.CrossCursor)
+            self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
         elif tool == 'rect_clean':
             self.setDragMode(QGraphicsView.NoDrag)
             self.viewport().setCursor(Qt.CursorShape.CrossCursor)

@@ -93,6 +93,12 @@ class CompareController(QtCore.QObject):
             self.main.central_stack.insertWidget(1, self.main.image_viewer)
             self.main.central_stack.setCurrentWidget(self.main.image_viewer)
             
+            # Restore normal lazy loading limits for main viewer
+            if self.main.webtoon_mode:
+                mgr = self.main.image_viewer.webtoon_manager
+                mgr.max_loaded_pages = 5   # default
+                mgr.viewport_buffer = 3000  # default
+            
             # Refresh to ensure it fits the full screen again
             QtCore.QTimer.singleShot(50, self.main.image_viewer.fitInView)
             
@@ -112,31 +118,59 @@ class CompareController(QtCore.QObject):
         try:
             # Load original image into original_viewer
             if self.main.image_files and self.main.curr_img_idx >= 0:
-                path = self.main.image_files[self.main.curr_img_idx]
-                
                 if self.main.webtoon_mode:
-                    # Sync webtoon state by cloning the layout to ensure perfect alignment
                     orig_viewer = self.compare_view.original_viewer
-                    orig_viewer.webtoon_manager._is_active = True
-                    # CORRECT METHOD: initialize_images
-                    orig_viewer.webtoon_manager.image_loader.initialize_images(self.main.image_files)
-                    orig_viewer.webtoon_manager.layout_manager.clone_from(self.main.image_viewer.webtoon_manager.layout_manager)
-                    orig_viewer.webtoon_manager._update_loaded_pages()
+                    src_manager = self.main.image_viewer.webtoon_manager
+                    tgt_manager = orig_viewer.webtoon_manager
                     
-                    # Force both to fitInView initially
-                    self.main.image_viewer.fitInView()
-                    self.compare_view.original_viewer.fitInView()
+                    # Disable text loading — original viewer is reference only
+                    tgt_manager.load_text_enabled = False
                     
-                    # Deep sync viewports to ensure they are identical
-                    self.compare_view.sync_viewports(self.main.image_viewer, self.compare_view.original_viewer)
+                    # Increase loaded page limits to prevent black gaps in compare mode
+                    tgt_manager.max_loaded_pages = 999  # Load all pages
+                    tgt_manager.viewport_buffer = 50000  # Large buffer to load everything
+                    
+                    # Also ensure main viewer loads all pages while in compare mode
+                    src_manager.max_loaded_pages = 999
+                    src_manager.viewport_buffer = 50000
+                    
+                    # Use the proper full-initialization path
+                    current_page = src_manager.layout_manager.current_page_index
+                    tgt_manager.load_images_lazy(self.main.image_files, current_page)
+                    
+                    # Sync viewport AFTER images have had time to render
+                    QtCore.QTimer.singleShot(300, self._delayed_viewport_sync)
                 else:
                     # Regular mode: Load original from disk
+                    path = self.main.image_files[self.main.curr_img_idx]
                     im = self.main.image_ctrl.load_image(path)
                     self.compare_view.original_viewer.display_image_array(im, fit=False)
-                    # Sync zoom if possible
                     self.compare_view.original_viewer.setTransform(self.main.image_viewer.transform())
         finally:
             self.compare_view.original_viewer.blockSignals(False)
             self.main.image_viewer.blockSignals(False)
             self.compare_view.original_viewer.verticalScrollBar().blockSignals(False)
             self.main.image_viewer.verticalScrollBar().blockSignals(False)
+
+    def _delayed_viewport_sync(self):
+        """Sync viewports after scene has had time to render."""
+        if not self.is_active or not hasattr(self, 'compare_view'):
+            return
+        
+        orig_viewer = self.compare_view.original_viewer
+        
+        # Step 1: Sync transform and scroll position
+        self.compare_view.sync_viewports(self.main.image_viewer, orig_viewer)
+        
+        # Step 2: Trigger lazy loading for both viewers at the synced position
+        # Multiple calls with increasing delays to ensure all visible pages load
+        for delay in [200, 500, 1000]:
+            QtCore.QTimer.singleShot(delay, self._trigger_both_load_pages)
+    
+    def _trigger_both_load_pages(self):
+        """Trigger lazy page loading for both viewers."""
+        if not self.is_active or not hasattr(self, 'compare_view'):
+            return
+        if self.main.webtoon_mode:
+            self.main.image_viewer.webtoon_manager._update_loaded_pages()
+            self.compare_view.original_viewer.webtoon_manager._update_loaded_pages()

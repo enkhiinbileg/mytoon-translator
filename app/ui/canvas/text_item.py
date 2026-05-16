@@ -184,8 +184,26 @@ class TextBlockItem(QGraphicsTextItem):
         self.update()
 
     def setCenterTransform(self):
-        center = self.boundingRect().center()
-        self.setTransformOriginPoint(center)
+        # Calculate new center in item coordinates
+        new_center = self.boundingRect().center()
+        old_origin = self.transformOriginPoint()
+        
+        if new_center == old_origin:
+            return
+
+        # If not rotated, we can just set the new origin
+        if self.rotation() == 0:
+            self.setTransformOriginPoint(new_center)
+            return
+
+        # For rotated items, changing the origin point shifts the item in scene coordinates.
+        # We must compensate by adjusting the item's position.
+        old_scene_pos = self.mapToParent(old_origin)
+        self.setTransformOriginPoint(new_center)
+        new_scene_pos = self.mapToParent(new_center)
+        
+        delta = old_scene_pos - new_scene_pos
+        self.setPos(self.pos() + delta)
 
     def on_document_enlarged(self):
         self.prepareGeometryChange()

@@ -193,10 +193,18 @@ class WebtoonLayoutManager:
         page_height = self.image_heights[page_index]
         
         target_y = page_y
-        if position == 'center':
+        if position == 'top':
+            # Align top of page with top of viewport instead of centering it
+            # centerOn(x, y) centers the viewport on (x, y). 
+            # To get top-alignment, we center on page_y + viewport_scene_height / 2
+            viewport_rect_scene = self.viewer.mapToScene(self.viewer.viewport().rect()).boundingRect()
+            target_y = page_y + (viewport_rect_scene.height() / 2)
+        elif position == 'center':
             target_y += page_height / 2
         elif position == 'bottom':
-            target_y += page_height
+            # Align bottom of page with bottom of viewport
+            viewport_rect_scene = self.viewer.mapToScene(self.viewer.viewport().rect()).boundingRect()
+            target_y = page_y + page_height - (viewport_rect_scene.height() / 2)
             
         print(f"WebtoonLayoutManager: Scrolling to page {page_index}, position {position}")
         print(f"  Page Y: {page_y}, Height: {page_height}, Target Y: {target_y}")

@@ -22,6 +22,16 @@ class EventHandler:
         clicked_item = self._resolve_top_level_item(self.viewer.itemAt(event.pos()))
         ctrl_pressed = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
         
+        # 1. Magic Wand Tool - High Priority Override
+        if str(self.viewer.current_tool).lower() in ['magic_wand', 'magicwand']:
+            if event.button() == Qt.LeftButton:
+                data = {
+                    'item': clicked_item if isinstance(clicked_item, (TextBlockItem, MoveableRectItem)) else None,
+                    'pos': scene_pos
+                }
+                self.viewer.magic_wand_requested.emit(data)
+                return # Stop further processing for this click
+
         # Delegate page change detection to the appropriate manager
         if self.viewer.webtoon_mode:
             self.viewer.webtoon_manager.update_page_on_click(scene_pos)
@@ -77,12 +87,14 @@ class EventHandler:
         if event.button() == Qt.LeftButton:
             # Magic Wand Tool - Single Click Cleaning
             if self.viewer.current_tool == 'magic_wand':
-                if isinstance(clicked_item, (TextBlockItem, MoveableRectItem)):
-                    # Find corresponding text block if it's a rect
-                    blk = clicked_item if isinstance(clicked_item, TextBlockItem) else None
-                    # Emit request to clean this block
-                    self.viewer.magic_wand_requested.emit(clicked_item)
-                    return # Stop further processing for this click
+                # Emit request to clean at this position (regardless of if an item was clicked)
+                # We wrap it in a dict to be extensible
+                data = {
+                    'item': clicked_item if isinstance(clicked_item, (TextBlockItem, MoveableRectItem)) else None,
+                    'pos': scene_pos
+                }
+                self.viewer.magic_wand_requested.emit(data)
+                return # Stop further processing for this click
             
             # Patch Restore Tool - Single Click Restoration
             if self.viewer.current_tool == 'patch_restore':
