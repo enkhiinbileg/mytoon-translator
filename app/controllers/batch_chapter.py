@@ -35,6 +35,9 @@ class BatchChapterController(QtCore.QObject):
         self._process_next()
 
     def _process_next(self):
+        if not self._is_running:
+            return
+            
         if self.current_idx >= len(self.queue):
             self._is_running = False
             # Show final message

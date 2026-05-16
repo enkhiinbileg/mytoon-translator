@@ -206,8 +206,7 @@ class BatchTextEditorController(QtCore.QObject):
                 rays_x = np.clip(rays_x, 0, w - 1)
                 rays_y = np.clip(rays_y, 0, h - 1)
                 
-                # Color-based border detection (The most robust way)
-                # We look for the first index where bubble color truly ends
+                # Hybrid Approach for Batch Mode
                 sampled_rgb = image[rays_y, rays_x].astype(float)
                 sampled_gray = np.mean(sampled_rgb, axis=2)
                 
@@ -215,20 +214,33 @@ class BatchTextEditorController(QtCore.QObject):
                 roi_to_fill = image[fy1:fy2, fx1:fx2]
                 bg_color_f = np.median(roi_to_fill[roi_h_f//4:3*roi_h_f//4, roi_w_f//4:3*roi_w_f//4], axis=(0,1)).astype(float) if roi_h_f > 10 else np.array([255,255,255], dtype=float)
                 
+                # Binary mask along rays: True if it's "bubble background"
                 color_dist = np.sqrt(np.sum((sampled_rgb - bg_color_f)**2, axis=2))
-                is_bg = color_dist < 40
+                ray_mask = color_dist < 50
                 
-                # Find border: skip first 40px, look for stroke (gray < 80) or color drop
+                # Find border using lookahead on the binary mask
                 hits = []
                 for i in range(num_rays):
-                    stroke_idx = np.where(sampled_gray[i, 40:] < 80)[0]
-                    drop_idx = np.where(color_dist[i, 40:] > 60)[0]
-                    
-                    h_val = len(radii) - 1
-                    if stroke_idx.size > 0:
-                        h_val = min(h_val, stroke_idx[0] + 40)
-                    if drop_idx.size > 0:
-                        h_val = min(h_val, drop_idx[0] + 40)
+                    false_indices = np.where(~ray_mask[i])[0]
+                    if false_indices.size == 0:
+                        h_val = len(radii) - 1
+                    else:
+                        found = False
+                        for f_idx in false_indices:
+                            # Lookahead: is it truly the end of the bubble?
+                            # 25px lookahead is safe for both large text and small bubbles
+                            lookahead = 25
+                            if f_idx + lookahead < len(radii):
+                                if not np.any(ray_mask[i, f_idx:f_idx+lookahead]):
+                                    h_val = f_idx
+                                    found = True
+                                    break
+                            else:
+                                h_val = f_idx
+                                found = True
+                                break
+                        if not found:
+                            h_val = false_indices[0]
                     hits.append(h_val)
                     
                 hits = np.array(hits)
@@ -459,13 +471,19 @@ class BatchTextEditorController(QtCore.QObject):
         def clean_worker():
             try:
                 # Convert scene pos to page-local pos
-                local_pos = scene_pos
+                cx, cy = int(scene_pos.x()), int(scene_pos.y())
                 if getattr(self.main, "webtoon_mode", False):
                     manager = self.main.image_viewer.webtoon_manager
-                    local_pos = manager.coordinate_converter.scene_to_page_local_position(scene_pos, page_idx)
+                    layout = manager.layout_manager
+                    page_y = layout.image_positions[page_idx]
+                    # Manually subtract page start to get local Y
+                    cy = int(scene_pos.y() - page_y)
+                    cx = int(scene_pos.x())
                 
-                self._fast_solid_clean_pos(page_idx, int(local_pos.x()), int(local_pos.y()))
+                self._fast_solid_clean_pos(page_idx, cx, cy)
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 print(f"DEBUG: Error in clean_worker: {e}")
 
         def on_finished(_=None):
@@ -490,91 +508,148 @@ class BatchTextEditorController(QtCore.QObject):
                 self.main.image_data[file_path] = image
         
         if image is None:
-            print(f"DEBUG: Failed to load image for page {page_idx} at {file_path}")
+            print(f"DEBUG: [Magic Wand] Failed to load image for page {page_idx}")
             return
         
         h, w = image.shape[:2]
         if not (0 <= cx < w and 0 <= cy < h):
-            print(f"DEBUG: Click position ({cx}, {cy}) is out of image bounds ({w}x{h})")
+            print(f"DEBUG: [Magic Wand] Click ({cx}, {cy}) out of bounds ({w}x{h})")
             return
-            
-        # 1. Sample background color at click point
-        y1_s, y2_s = max(0, cy - 2), min(h, cy + 2)
-        x1_s, x2_s = max(0, cx - 2), min(w, cx + 2)
-        bg_sample = image[y1_s:y2_s, x1_s:x2_s]
-        bg_color = np.median(bg_sample, axis=(0,1)).astype(np.uint8) if bg_sample.size > 0 else np.array([255,255,255], dtype=np.uint8)
-        
-        # 2. Simplified Radial Ray logic for "Solid Fill"
-        gray = np.mean(image.astype(float), axis=2)
-        num_rays = 120
-        max_r = 450
-        angles = np.linspace(0, 2 * np.pi, num_rays, endpoint=False)
-        radii = np.arange(1, max_r)
-        
-        cos_a = np.cos(angles)[:, None]
-        sin_a = np.sin(angles)[:, None]
-        
-        rx = np.clip((cx + cos_a * radii).astype(int), 0, w - 1)
-        ry = np.clip((cy + sin_a * radii).astype(int), 0, h - 1)
-        
-        sampled_gray = gray[ry, rx]
-        
-        # Border detection: Skip first 40px (text), then find first dark pixel (gray < 80)
-        hits = []
-        for i in range(num_rays):
-            # Find first truly dark pixel (stroke) after the skip
-            # We use a stricter threshold (80) to avoid stopping at shadows
-            dark_indices = np.where(sampled_gray[i, 40:] < 80)[0]
-            if dark_indices.size > 0:
-                h_idx = dark_indices[0] + 40
-            else:
-                h_idx = len(radii) - 1
-            hits.append(h_idx)
-            
-        hits = np.array(hits)
-        # RETRACT 2px for safety to avoid eating the border
-        hits = np.clip(hits - 2, 0, len(radii) - 1)
-        
-        final_radii = radii[hits]
-        border_px = cx + np.cos(angles) * final_radii
-        border_py = cy + np.sin(angles) * final_radii
-        
-        fx1, fy1 = max(0, int(np.min(border_px))), max(0, int(np.min(border_py)))
-        fx2, fy2 = min(w, int(np.max(border_px)) + 1), min(h, int(np.max(border_py)) + 1)
-        
-        roi_h_f, roi_w_f = fy2 - fy1, fx2 - fx1
-        if roi_h_f <= 0 or roi_w_f <= 0: return
-            
-        local_points = np.stack([border_px - fx1, border_py - fy1], axis=1)
-        poly_mask = np.zeros((roi_h_f, roi_w_f), dtype=bool)
-        
-        for row in range(roi_h_f):
-            x_a, y_a = local_points[:, 0], local_points[:, 1]
-            x_b, y_b = np.roll(x_a, -1), np.roll(y_a, -1)
-            valid = ((y_a <= row) & (y_b > row)) | ((y_b <= row) & (y_a > row))
-            if not np.any(valid): continue
-            intersections = np.sort(x_a[valid] + (row - y_a[valid]) * (x_b[valid] - x_a[valid]) / (y_b[valid] - y_a[valid]))
-            for k in range(0, len(intersections) - 1, 2):
-                poly_mask[row, int(intersections[k]):int(intersections[k+1])+1] = True
 
-        roi_to_fill = image[fy1:fy2, fx1:fx2].copy()
-        roi_to_fill[poly_mask] = bg_color
-        image[fy1:fy2, fx1:fx2] = roi_to_fill
-        
+        import cv2
+
+        # ── Step 1: Sample fill color ─────────────────────────────────────────
+        y1_s, y2_s = max(0, cy - 5), min(h, cy + 5)
+        x1_s, x2_s = max(0, cx - 5), min(w, cx + 5)
+        sample = image[y1_s:y2_s, x1_s:x2_s]
+        if sample.size > 0:
+            lum = sample.mean(axis=2)
+            r_s, c_s = np.unravel_index(np.argmax(lum), lum.shape)
+            fill_color = sample[r_s, c_s].tolist()
+        else:
+            fill_color = [255, 255, 255]
+
+        fill_brightness = sum(fill_color) / 3.0
+        print(f"DEBUG: [Magic Wand] Click at ({cx}, {cy}). Color Sample: {fill_color} (Brightness: {fill_brightness:.1f})")
+
+        # ── Step 2: Detect mode ───────────────────────────────────────────────
+        if fill_brightness < 100:
+            print("DEBUG: [Magic Wand] Mode detected: Borderless (Dark Background)")
+            # Borderless Mode (Dark background)
+            WIN = 300
+            lx1, ly1 = max(0, cx - WIN), max(0, cy - WIN)
+            lx2, ly2 = min(w, cx + WIN), min(h, cy + WIN)
+            local_region = image[ly1:ly2, lx1:lx2]
+            local_gray = cv2.cvtColor(local_region, cv2.COLOR_RGB2GRAY)
+
+            # Detect bright text or outlines
+            TEXT_THRESH = 150
+            text_mask = local_gray > TEXT_THRESH
+
+            # Dilate to catch strokes/outlines
+            k = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
+            dilated = cv2.dilate(text_mask.astype(np.uint8), k)
+            num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(dilated)
+
+            lcx, lcy = cx - lx1, cy - ly1
+            best_label = 0
+            best_dist = float('inf')
+            for label_id in range(1, num_labels):
+                x_cc, y_cc = stats[label_id, cv2.CC_STAT_LEFT], stats[label_id, cv2.CC_STAT_TOP]
+                bw, bh = stats[label_id, cv2.CC_STAT_WIDTH], stats[label_id, cv2.CC_STAT_HEIGHT]
+                cx_cc, cy_cc = x_cc + bw // 2, y_cc + bh // 2
+                
+                dist = ((lcx - cx_cc) ** 2 + (lcy - cy_cc) ** 2) ** 0.5
+                if x_cc <= lcx <= x_cc + bw and y_cc <= lcy <= y_cc + bh:
+                    best_label = label_id
+                    break
+                if dist < best_dist:
+                    best_dist = dist
+                    best_label = label_id
+
+            if best_label == 0:
+                print("DEBUG: [Magic Wand] No text cluster found near click.")
+                return
+
+            component_mask = (labels == best_label)
+            ys_cc, xs_cc = np.where(component_mask)
+            
+            fx1, fy1 = int(xs_cc.min()) + lx1, int(ys_cc.min()) + ly1
+            fx2, fy2 = int(xs_cc.max()) + lx1 + 1, int(ys_cc.max()) + ly1 + 1
+            
+            # Fill the entire component region
+            image[ys_cc + ly1, xs_cc + lx1] = fill_color
+            roi_to_fill = image[fy1:fy2, fx1:fx2].copy()
+            print(f"DEBUG: [Magic Wand] Cleaned borderless component: {fx2-fx1}x{fy2-fy1}")
+
+        else:
+            print("DEBUG: [Magic Wand] Mode detected: Normal (Light Bubble)")
+            # Normal Mode (Light bubble)
+            TOLERANCE = 30 # Lower to prevent leaking
+            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            
+            # Use a mask to block the flood fill from crossing strong edges
+            # This is an extra safety layer
+            edges = cv2.Canny(gray, 50, 150)
+            ff_mask = np.zeros((h + 2, w + 2), dtype=np.uint8)
+            ff_mask[1:-1, 1:-1] = edges
+            
+            seed_val = int(gray[cy, cx])
+            lo, up = min(seed_val, TOLERANCE), min(255 - seed_val, TOLERANCE)
+            
+            # Flood fill to find the background area around text
+            try:
+                cv2.floodFill(gray.copy(), ff_mask, (cx, cy), 1, (lo,), (up,), cv2.FLOODFILL_MASK_ONLY | (1 << 8))
+            except Exception as e:
+                print(f"DEBUG: [Magic Wand] floodFill failed: {e}")
+                cv2.floodFill(gray.copy(), ff_mask, (cx, cy), 1, lo, up, cv2.FLOODFILL_MASK_ONLY | (1 << 8))
+
+            # The 1s in ff_mask (excluding the pre-set edges) is our bubble interior background
+            bubble_mask = (ff_mask[1:-1, 1:-1] == 1).astype(np.uint8)
+
+            # Surgical Hole Filling: Fill everything that is NOT the exterior
+            # This preserves the exact border found by floodFill
+            ext_mask = bubble_mask.copy()
+            h_m, w_m = ext_mask.shape
+            tmp = np.zeros((h_m + 2, w_m + 2), np.uint8)
+            cv2.floodFill(ext_mask, tmp, (0, 0), 2)
+            fill_region = (ext_mask != 2).astype(bool)
+
+            ys, xs = np.where(fill_region)
+            if ys.size == 0:
+                print("DEBUG: [Magic Wand] Resulting fill region is empty.")
+                return
+
+            # Safety check: if the region is too huge (leaked), abort or shrink
+            if ys.size > (w * h * 0.5): # If it covers more than 50% of the page, it definitely leaked
+                print("DEBUG: [Magic Wand] Leak detected (too large). Aborting to protect artwork.")
+                return
+
+            fx1, fy1 = int(xs.min()), int(ys.min())
+            fx2, fy2 = int(xs.max()) + 1, int(ys.max()) + 1
+
+            # Final smooth paint
+            image[fill_region] = fill_color
+            roi_to_fill = image[fy1:fy2, fx1:fx2].copy()
+            print(f"DEBUG: [Magic Wand] Perfect Clean completed: {fx2-fx1}x{fy2-fy1}")
+
+        # ── Step 4: Emit Patch ────────────────────────────────────────────────
         patches = [{
             'x': fx1, 'y': fy1, 'w': fx2 - fx1, 'h': fy2 - fy1,
             'bbox': [fx1, fy1, fx2 - fx1, fy2 - fy1],
             'image': roi_to_fill,
             'page_index': page_idx
         }]
-        
+
         if getattr(self.main, "webtoon_mode", False):
             manager = self.main.image_viewer.webtoon_manager
-            scene_pos = manager.coordinate_converter.page_local_to_scene_position(QtCore.QPointF(fx1, fy1), page_idx)
+            scene_pos = manager.coordinate_converter.page_local_to_scene_position(
+                QtCore.QPointF(fx1, fy1), page_idx
+            )
             patches[0]['scene_pos'] = [scene_pos.x(), scene_pos.y()]
-            
+
         self.main.patches_processed.emit(patches, file_path)
-        print(f"DEBUG: Patch emitted for bubble at {fx1}, {fy1}")
+        print(f"DEBUG: [Magic Wand] Patch emitted for bubble at {fx1}, {fy1}")
 
     def magic_wand_clean(self):
         """Parses the clipboard for block IDs and runs cleaning for all of them."""
